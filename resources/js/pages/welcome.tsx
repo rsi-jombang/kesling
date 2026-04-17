@@ -24,10 +24,12 @@ import {
     ArrowRight,
     Monitor,
     MousePointer2,
-    Info
+    Info,
+    Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppearance } from '@/hooks/use-appearance';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -41,6 +43,7 @@ import {
     BarChart3,
     FileDown,
     TrendingUp,
+    Search,
     LineChart as ChartIcon,
     Table as TableIcon
 } from 'lucide-react';
@@ -120,11 +123,12 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
     // ── Public Report State ─────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState<'input' | 'report'>('input');
     const [chartFilter, setChartFilter] = useState({
-        ruangan_id:  ruangans[0]?.id.toString() || '',
+        ruangan_ids: [ruangans[0]?.id.toString()].filter(Boolean) as string[],
         kategori_id: kategoris[0]?.id.toString() || '',
         bulan:       dateDefaults.bulan.toString(),
         tahun:       dateDefaults.tahun.toString(),
     });
+    const [searchRuanganText, setSearchRuanganText] = useState('');
     const [grafik, setGrafik] = useState<GrafikData | null>(null);
     const [loadingChart, setLoadingChart] = useState(false);
 
@@ -153,10 +157,18 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
     const YEARS = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
     const fetchGrafik = async () => {
-        if (!chartFilter.ruangan_id || !chartFilter.kategori_id) return;
+        // Find the first room ID from selection for chart
+        const firstRuanganId = chartFilter.ruangan_ids[0];
+        if (!firstRuanganId || !chartFilter.kategori_id) return;
+
         setLoadingChart(true);
         try {
-            const params = new URLSearchParams(chartFilter);
+            const params = new URLSearchParams({
+                ruangan_id:  firstRuanganId,
+                kategori_id: chartFilter.kategori_id,
+                bulan:       chartFilter.bulan,
+                tahun:       chartFilter.tahun,
+            });
             const res = await fetch(`/public/grafik?${params.toString()}`);
             const json = await res.json();
             setGrafik(json);
@@ -168,13 +180,13 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
     };
 
     const handleDownloadPdf = () => {
-        if (!chartFilter.ruangan_id) return;
-        const params = new URLSearchParams({
-            'ruangan_ids[]': chartFilter.ruangan_id,
-            kategori_id: chartFilter.kategori_id,
-            bulan: chartFilter.bulan,
-            tahun: chartFilter.tahun
-        });
+        if (chartFilter.ruangan_ids.length === 0) return;
+        const params = new URLSearchParams();
+        chartFilter.ruangan_ids.forEach(id => params.append('ruangan_ids[]', id));
+        params.append('kategori_id', chartFilter.kategori_id);
+        params.append('bulan', chartFilter.bulan);
+        params.append('tahun', chartFilter.tahun);
+
         window.open(`/public/report/download?${params.toString()}`, '_blank');
     };
 
@@ -182,7 +194,7 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
         if (activeTab === 'report') {
             fetchGrafik();
         }
-    }, [chartFilter, activeTab]);
+    }, [chartFilter.ruangan_ids[0], chartFilter.kategori_id, chartFilter.bulan, chartFilter.tahun, activeTab]);
 
     useEffect(() => {
         if (data.ruangan_id) {
@@ -552,36 +564,29 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                         <TrendingUp className="h-3.5 w-3.5" /> Analisis Tren
                                     </div>
                                     <h2 className="text-3xl font-black italic tracking-tighter uppercase">Visualisasi Data</h2>
-                                    <p className="text-xs font-medium text-slate-500">Gunakan filter di samping untuk melihat grafik per shift.</p>
+                                    <p className="text-xs font-medium text-slate-500">Pilih Parameter terlebih dahulu untuk menampilkan daftar ruangan.</p>
                                 </div>
 
                                 <Button
                                     onClick={handleDownloadPdf}
-                                    className="h-14 rounded-[20px] bg-slate-900 dark:bg-indigo-600 text-white font-black italic px-8 shadow-xl hover:scale-105 active:scale-95 transition-all gap-2"
+                                    disabled={chartFilter.ruangan_ids.length === 0 || !chartFilter.kategori_id}
+                                    className="h-14 rounded-[20px] bg-slate-900 dark:bg-indigo-600 text-white font-black italic px-8 shadow-xl hover:scale-105 active:scale-95 transition-all gap-2 disabled:opacity-50"
                                 >
                                     <FileDown className="h-5 w-5" />
-                                    CETAK LAPORAN PDF
+                                    CETAK PDF ({chartFilter.ruangan_ids.length} RUANGAN)
                                 </Button>
                             </div>
 
                             {/* Filters */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-8 gap-y-6 mb-10 pt-10 border-t border-slate-100 dark:border-slate-800/50">
-                                <div className="space-y-3 min-w-0">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 pl-1">Ruangan</Label>
-                                    <SearchableRuanganSelect
-                                        ruangans={ruangans}
-                                        value={chartFilter.ruangan_id}
-                                        onValueChange={(v) => setChartFilter(f => ({ ...f, ruangan_id: v }))}
-                                        placeholder="Cari ruangan..."
-                                        className="h-14 w-full rounded-2xl bg-slate-50/50 dark:bg-slate-950/50 border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-900 font-bold italic px-5 overflow-hidden"
-                                    />
-                                </div>
-
-                                <div className="space-y-3 min-w-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 pt-10 border-t border-slate-100 dark:border-slate-800/50">
+                                <div className="space-y-3">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 pl-1">Parameter</Label>
                                     <Select
                                         value={chartFilter.kategori_id}
-                                        onValueChange={(v) => setChartFilter(f => ({ ...f, kategori_id: v }))}
+                                        onValueChange={(v) => {
+                                            setChartFilter(f => ({ ...f, kategori_id: v, ruangan_ids: [] }));
+                                            setSearchRuanganText('');
+                                        }}
                                     >
                                         <SelectTrigger className="h-14 w-full rounded-2xl bg-slate-50/50 dark:bg-slate-950/50 border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-900 font-bold italic px-5 overflow-hidden">
                                             <div className="truncate text-left w-full"><SelectValue /></div>
@@ -594,7 +599,7 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                     </Select>
                                 </div>
 
-                                <div className="space-y-3 min-w-0">
+                                <div className="space-y-3">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 pl-1">Bulan</Label>
                                     <Select
                                         value={chartFilter.bulan}
@@ -611,7 +616,7 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                     </Select>
                                 </div>
 
-                                <div className="space-y-3 min-w-0">
+                                <div className="space-y-3">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 pl-1">Tahun</Label>
                                     <Select
                                         value={chartFilter.tahun}
@@ -629,6 +634,106 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                 </div>
                             </div>
 
+                            {/* Multiple Room Selection Card */}
+                            <div className={cn(
+                                "mb-10 space-y-4 rounded-3xl border-2 p-6 transition-all duration-500",
+                                !chartFilter.kategori_id ? "opacity-40 grayscale pointer-events-none" : "border-slate-50 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-950/30"
+                            )}>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg">
+                                            <Building2 className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase tracking-widest italic">Pilih Ruangan : {chartFilter.ruangan_ids.length} Terpilih</h3>
+                                            <p className="text-[10px] font-medium text-slate-500">Multiple ruangan akan digabung dalam satu PDF.</p>
+                                        </div>
+                                    </div>
+
+                                    {chartFilter.kategori_id && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                const validIds = ruangans
+                                                    .filter(r => r.standarts.some(s => s.kategori_pengukuran_id.toString() === chartFilter.kategori_id))
+                                                    .map(r => r.id.toString());
+
+                                                if (chartFilter.ruangan_ids.length === validIds.length && validIds.length > 0) {
+                                                    setChartFilter(f => ({ ...f, ruangan_ids: [] }));
+                                                } else {
+                                                    setChartFilter(f => ({ ...f, ruangan_ids: validIds }));
+                                                }
+                                            }}
+                                            className="h-8 text-[10px] font-black uppercase italic text-blue-600 hover:text-blue-700"
+                                        >
+                                            {chartFilter.ruangan_ids.length === ruangans.filter(r => r.standarts.some(s => s.kategori_pengukuran_id.toString() === chartFilter.kategori_id)).length && ruangans.filter(r => r.standarts.some(s => s.kategori_pengukuran_id.toString() === chartFilter.kategori_id)).length > 0 ? 'Hapus Semua' : 'Pilih Semua'}
+                                        </Button>
+                                    )}
+                                </div>
+
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <Input
+                                        placeholder="Cari ruangan..."
+                                        value={searchRuanganText}
+                                        onChange={(e) => setSearchRuanganText(e.target.value)}
+                                        className="h-12 pl-11 rounded-2xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-2 rounded-2xl border border-slate-100 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50 scrollbar-thin">
+                                    {ruangans
+                                        .filter(r => {
+                                            const hasStandard = r.standarts.some(s => s.kategori_pengukuran_id.toString() === chartFilter.kategori_id);
+                                            const matchesSearch = r.nama_ruangan.toLowerCase().includes(searchRuanganText.toLowerCase());
+                                            return hasStandard && matchesSearch;
+                                        })
+                                        .map(r => {
+                                            const isSelected = chartFilter.ruangan_ids.includes(r.id.toString());
+                                            return (
+                                                <div
+                                                    key={r.id}
+                                                    onClick={() => {
+                                                        const id = r.id.toString();
+                                                        setChartFilter(f => ({
+                                                            ...f,
+                                                            ruangan_ids: isSelected ? f.ruangan_ids.filter(i => i !== id) : [...f.ruangan_ids, id]
+                                                        }));
+                                                    }}
+                                                    className={cn(
+                                                        "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all border",
+                                                        isSelected
+                                                            ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/20 scale-[1.02]"
+                                                            : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700"
+                                                    )}
+                                                >
+                                                    <Checkbox
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => {}} // Controlled via parent onClick
+                                                        className={cn("h-4 w-4 rounded-md border-2", isSelected ? "border-white bg-white text-blue-600" : "border-slate-200")}
+                                                    />
+                                                    <span className="text-xs font-black uppercase tracking-tight truncate flex-1">
+                                                        {r.nama_ruangan}
+                                                    </span>
+                                                    {isSelected && <Check className="h-3 w-3" strokeWidth={4} />}
+                                                </div>
+                                            );
+                                        })
+                                    }
+                                    {ruangans.filter(r => r.standarts.some(s => s.kategori_pengukuran_id.toString() === chartFilter.kategori_id)).length === 0 && chartFilter.kategori_id && (
+                                        <div className="col-span-full py-12 text-center">
+                                            <p className="text-xs font-black text-slate-400 uppercase italic">Tidak ada ruangan dengan standar ini...</p>
+                                        </div>
+                                    )}
+                                    {!chartFilter.kategori_id && (
+                                        <div className="col-span-full py-12 text-center">
+                                            <p className="text-xs font-black text-slate-400 uppercase italic">Silakan pilih parameter terlebih dahulu...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Chart Area */}
                             <div className="relative min-h-[400px] flex items-center justify-center rounded-[32px] bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 p-6">
                                 {loadingChart ? (
@@ -639,67 +744,78 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                 ) : !grafik || grafik.data.length === 0 ? (
                                     <div className="flex flex-col items-center gap-4 text-slate-400 grayscale opacity-40">
                                         <Activity className="h-20 w-20" strokeWidth={1} />
-                                        <p className="text-sm font-black italic">Belum ada data terekam.</p>
+                                        <p className="text-sm font-black italic">Pilih minimal 1 ruangan untuk melihat grafik.</p>
                                     </div>
                                 ) : (
-                                    <ResponsiveContainer width="100%" height={380}>
-                                        <LineChart data={grafik.data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.3)" />
-                                            <XAxis
-                                                dataKey="label"
-                                                axisLine={false} tickLine={false}
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: 'currentColor', opacity: 0.5 }}
-                                                label={{ value: 'Tanggal', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 800, fill: 'currentColor', opacity: 0.5 }}
-                                            />
-                                            <YAxis
-                                                axisLine={false} tickLine={false}
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: 'currentColor', opacity: 0.5 }}
-                                                unit={grafik.satuan ? ` ${grafik.satuan}` : ''}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    borderRadius: '24px',
-                                                    border: 'none',
-                                                    boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)',
-                                                    background: 'hsl(var(--card))',
-                                                    padding: '16px'
-                                                }}
-                                                labelStyle={{ fontWeight: 900, marginBottom: '8px', opacity: 0.6 }}
-                                                formatter={(value, name) => [
-                                                    <span className="font-black">{value} {grafik.satuan}</span>,
-                                                    <span className="text-[10px] font-bold uppercase">{SHIFT_LABELS[String(name)] ?? name}</span>
-                                                ]}
-                                            />
-                                            <Legend
-                                                verticalAlign="top" align="right"
-                                                iconType="circle"
-                                                formatter={(value) => <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">{SHIFT_LABELS[value] ?? value}</span>}
-                                            />
-
-                                            {/* Standar Lines */}
-                                            {grafik.min_value != null && (
-                                                <Line dataKey={() => grafik.min_value} stroke="#ef4444" strokeWidth={1} strokeDasharray="5 5" dot={false} name="Min Standar" legendType="none" />
+                                    <div className="w-full space-y-4">
+                                        <div className="flex items-center justify-between px-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Visualisasi Utama : <span className="text-blue-600 italic">{(ruangans.find(r => r.id.toString() === chartFilter.ruangan_ids[0])?.nama_ruangan) || ''}</span></p>
+                                            </div>
+                                            {chartFilter.ruangan_ids.length > 1 && (
+                                                <p className="text-[9px] font-bold text-slate-400 italic">*Grafik hanya menampilkan data ruangan pertama pilihan Anda.</p>
                                             )}
-                                            {grafik.max_value != null && (
-                                                <Line dataKey={() => grafik.max_value} stroke="#ef4444" strokeWidth={1} strokeDasharray="5 5" dot={false} name="Max Standar" legendType="none" />
-                                            )}
-
-                                            {/* Data Lines */}
-                                            {grafik.shifts.map(shift => (
-                                                <Line
-                                                    key={shift}
-                                                    type="monotone"
-                                                    dataKey={shift}
-                                                    name={shift}
-                                                    stroke={SHIFT_COLORS[shift]}
-                                                    strokeWidth={4}
-                                                    dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: SHIFT_COLORS[shift] }}
-                                                    activeDot={{ r: 7, strokeWidth: 0, shadow: '0 0 10px rgba(0,0,0,0.5)' }}
-                                                    connectNulls
+                                        </div>
+                                        <ResponsiveContainer width="100%" height={380}>
+                                            <LineChart data={grafik.data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.3)" />
+                                                <XAxis
+                                                    dataKey="label"
+                                                    axisLine={false} tickLine={false}
+                                                    tick={{ fontSize: 10, fontWeight: 700, fill: 'currentColor', opacity: 0.5 }}
+                                                    label={{ value: 'Tanggal', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 800, fill: 'currentColor', opacity: 0.5 }}
                                                 />
-                                            ))}
-                                        </LineChart>
-                                    </ResponsiveContainer>
+                                                <YAxis
+                                                    axisLine={false} tickLine={false}
+                                                    tick={{ fontSize: 10, fontWeight: 700, fill: 'currentColor', opacity: 0.5 }}
+                                                    unit={grafik.satuan ? ` ${grafik.satuan}` : ''}
+                                                />
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        borderRadius: '24px',
+                                                        border: 'none',
+                                                        boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)',
+                                                        background: 'hsl(var(--card))',
+                                                        padding: '16px'
+                                                    }}
+                                                    labelStyle={{ fontWeight: 900, marginBottom: '8px', opacity: 0.6 }}
+                                                    formatter={(value, name) => [
+                                                        <span className="font-black">{value} {grafik.satuan}</span>,
+                                                        <span className="text-[10px] font-bold uppercase">{SHIFT_LABELS[String(name)] ?? name}</span>
+                                                    ]}
+                                                />
+                                                <Legend
+                                                    verticalAlign="top" align="right"
+                                                    iconType="circle"
+                                                    formatter={(value) => <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">{SHIFT_LABELS[value] ?? value}</span>}
+                                                />
+
+                                                {/* Standar Lines */}
+                                                {grafik.min_value != null && (
+                                                    <Line dataKey={() => grafik.min_value} stroke="#ef4444" strokeWidth={1} strokeDasharray="5 5" dot={false} name="Min Standar" legendType="none" />
+                                                )}
+                                                {grafik.max_value != null && (
+                                                    <Line dataKey={() => grafik.max_value} stroke="#ef4444" strokeWidth={1} strokeDasharray="5 5" dot={false} name="Max Standar" legendType="none" />
+                                                )}
+
+                                                {/* Data Lines */}
+                                                {grafik.shifts.map(shift => (
+                                                    <Line
+                                                        key={shift}
+                                                        type="monotone"
+                                                        dataKey={shift}
+                                                        name={shift}
+                                                        stroke={SHIFT_COLORS[shift]}
+                                                        strokeWidth={4}
+                                                        dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: SHIFT_COLORS[shift] }}
+                                                        activeDot={{ r: 7, strokeWidth: 0, shadow: '0 0 10px rgba(0,0,0,0.5)' }}
+                                                        connectNulls
+                                                    />
+                                                ))}
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 )}
                             </div>
 
@@ -766,12 +882,4 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
             `}</style>
         </div>
     );
-}
-
-function Search(props: any) {
-    return (
-        <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-        </svg>
-    )
 }
