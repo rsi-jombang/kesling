@@ -17,6 +17,7 @@ interface Kategori {
     id: number;
     nama_kategori: string;
     satuan: string | null;
+    tipe_data: string;
 }
 
 interface Props {
@@ -33,6 +34,10 @@ export default function Create({kategoris}: Props) {
     const { data, setData, post, processing, errors } = useForm({
         nama_ruangan: '',
         nama_kasi: '',
+        panjang: '',
+        lebar: '',
+        tinggi: '',
+        luas_ventilasi_statis: '',
         standarts: [] as Standar[],
     });
 
@@ -106,6 +111,57 @@ export default function Create({kategoris}: Props) {
                                 )}
                             </div>
                         </div>
+
+                        <div className="grid sm:grid-cols-4 gap-6 pt-2 border-t mt-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="panjang" className="font-semibold text-sm">Panjang (m)</Label>
+                                <Input
+                                    id="panjang"
+                                    type="number"
+                                    step="any"
+                                    value={data.panjang}
+                                    onChange={(e) => setData('panjang', e.target.value)}
+                                    placeholder="0"
+                                />
+                                {errors.panjang && <p className="text-xs text-destructive">{errors.panjang}</p>}
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="lebar" className="font-semibold text-sm">Lebar (m)</Label>
+                                <Input
+                                    id="lebar"
+                                    type="number"
+                                    step="any"
+                                    value={data.lebar}
+                                    onChange={(e) => setData('lebar', e.target.value)}
+                                    placeholder="0"
+                                />
+                                {errors.lebar && <p className="text-xs text-destructive">{errors.lebar}</p>}
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="tinggi" className="font-semibold text-sm">Tinggi (m)</Label>
+                                <Input
+                                    id="tinggi"
+                                    type="number"
+                                    step="any"
+                                    value={data.tinggi}
+                                    onChange={(e) => setData('tinggi', e.target.value)}
+                                    placeholder="0"
+                                />
+                                {errors.tinggi && <p className="text-xs text-destructive">{errors.tinggi}</p>}
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="luas_ventilasi_statis" className="font-semibold text-sm">Luas Bukaan Ventilasi (m²)</Label>
+                                <Input
+                                    id="luas_ventilasi_statis"
+                                    type="number"
+                                    step="any"
+                                    value={data.luas_ventilasi_statis}
+                                    onChange={(e) => setData('luas_ventilasi_statis', e.target.value)}
+                                    placeholder="0 (Pintu+Jendela)"
+                                />
+                                {errors.luas_ventilasi_statis && <p className="text-xs text-destructive">{errors.luas_ventilasi_statis}</p>}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="bg-card border rounded-lg p-4 sm:p-6 space-y-6 shadow-sm">
@@ -133,8 +189,20 @@ export default function Create({kategoris}: Props) {
                                             <Label className="md:hidden lg:block">Parameter (Kategori)</Label>
                                             <Label className="hidden md:block lg:hidden">Parameter</Label>
                                             <Select
-                                                value={item.kategori_id}
-                                                onValueChange={(val) => updateStandard(index, 'kategori_id', val)}
+                                                value={item.kategori_id ? String(item.kategori_id) : undefined}
+                                                onValueChange={(val) => {
+                                                    const kat = kategoris.find(k => k.id.toString() === val);
+                                                    const isApar = kat?.tipe_data === 'checklist_apar';
+                                                    
+                                                    const newStandarts = [...data.standarts];
+                                                    newStandarts[index] = { 
+                                                        ...newStandarts[index], 
+                                                        kategori_id: val,
+                                                        ...(isApar ? { min_value: '', max_value: '' } : {})
+                                                    };
+                                                    
+                                                    setData('standarts', newStandarts);
+                                                }}
                                             >
                                                 <SelectTrigger className="w-full">
                                                     <SelectValue placeholder="Pilih Kategori" />
@@ -152,29 +220,37 @@ export default function Create({kategoris}: Props) {
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
-                                            <div className="grid gap-2 flex-1 md:w-[120px]">
-                                                <Label>Min Value</Label>
-                                                <Input
-                                                    type="number"
-                                                    step="any"
-                                                    value={item.min_value}
-                                                    onChange={(e) => updateStandard(index, 'min_value', e.target.value)}
-                                                    placeholder="Min"
-                                                />
-                                            </div>
+                                        {(() => {
+                                            const selKat = kategoris.find(k => k.id.toString() === item.kategori_id);
+                                            const isChecklist = selKat?.tipe_data === 'checklist_apar';
+                                            return (
+                                                <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
+                                                    <div className="grid gap-2 flex-1 md:w-[120px]">
+                                                        <Label>Min Value</Label>
+                                                        <Input
+                                                            type="number"
+                                                            step="any"
+                                                            value={item.min_value}
+                                                            disabled={isChecklist}
+                                                            onChange={(e) => updateStandard(index, 'min_value', e.target.value)}
+                                                            placeholder={isChecklist ? "-" : "Min"}
+                                                        />
+                                                    </div>
 
-                                            <div className="grid gap-2 flex-1 md:w-[120px]">
-                                                <Label>Max Value</Label>
-                                                <Input
-                                                    type="number"
-                                                    step="any"
-                                                    value={item.max_value}
-                                                    onChange={(e) => updateStandard(index, 'max_value', e.target.value)}
-                                                    placeholder="Max"
-                                                />
-                                            </div>
-                                        </div>
+                                                    <div className="grid gap-2 flex-1 md:w-[120px]">
+                                                        <Label>Max Value</Label>
+                                                        <Input
+                                                            type="number"
+                                                            step="any"
+                                                            value={item.max_value}
+                                                            disabled={isChecklist}
+                                                            onChange={(e) => updateStandard(index, 'max_value', e.target.value)}
+                                                            placeholder={isChecklist ? "-" : "Max"}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
 
                                         <Button
                                             type="button"

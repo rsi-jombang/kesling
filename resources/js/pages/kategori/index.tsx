@@ -45,8 +45,10 @@ interface Kategori {
     satuan: string | null;
     tipe_data: string;
     keterangan: string | null;
+    is_public: boolean;
     analisa_memenuhi: string | null;
     analisa_tidak_memenuhi: string | null;
+    analisa_melebihi_standart: string | null;
 }
 
 interface Props {
@@ -63,9 +65,11 @@ export default function Index({ kategoris }: Props) {
         nama_kategori: '',
         satuan: '',
         tipe_data: 'numeric',
+        is_public: false,
         keterangan: '',
         analisa_memenuhi: '',
         analisa_tidak_memenuhi: '',
+        analisa_melebihi_standart: '',
     });
 
     const openCreateDialog = () => {
@@ -81,6 +85,7 @@ export default function Index({ kategoris }: Props) {
             nama_kategori: kategori.nama_kategori,
             satuan: kategori.satuan || '',
             tipe_data: kategori.tipe_data,
+            is_public: !!kategori.is_public,
             keterangan: kategori.keterangan || '',
             analisa_memenuhi: kategori.analisa_memenuhi || '',
             analisa_tidak_memenuhi: kategori.analisa_tidak_memenuhi || '',
@@ -158,9 +163,16 @@ export default function Index({ kategoris }: Props) {
                                         </TableCell>
                                         <TableCell>{kategori.satuan || '-'}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary" className="capitalize">
-                                                {kategori.tipe_data}
-                                            </Badge>
+                                            <div className="flex flex-col gap-1 items-start">
+                                                <Badge variant="secondary" className="capitalize">
+                                                    {kategori.tipe_data.replace('_', ' ')}
+                                                </Badge>
+                                                {kategori.is_public ? (
+                                                    <Badge variant="default" className="text-[10px] bg-blue-500 hover:bg-blue-600">Publik</Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-[10px]">Privat</Badge>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
@@ -237,11 +249,26 @@ export default function Index({ kategoris }: Props) {
                                         <SelectItem value="numeric">Numeric (Angka)</SelectItem>
                                         <SelectItem value="string">String (Teks)</SelectItem>
                                         <SelectItem value="boolean">Boolean (Ya/Tidak)</SelectItem>
+                                        <SelectItem value="checklist_apar">Checklist APAR Bulanan</SelectItem>
+                                        <SelectItem value="rumus_ach">Rumus ACH (Laju Udara)</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {errors.tipe_data && (
                                     <p className="text-sm text-destructive">{errors.tipe_data}</p>
                                 )}
+                            </div>
+                            <div className="grid gap-2">
+                                <Label className="flex items-center gap-2 cursor-pointer border p-3 rounded-md hover:bg-secondary/20">
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+                                        checked={data.is_public}
+                                        onChange={(e) => setData('is_public', e.target.checked)} />
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-sm">Akses Publik (Tanpa Login)</span>
+                                        <span className="text-xs text-muted-foreground w-full font-normal">Kategori ini bisa diisi orang umum via scan QR/Link Publik.</span>
+                                    </div>
+                                </Label>
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="keterangan">Keterangan</Label>
@@ -294,6 +321,20 @@ export default function Index({ kategoris }: Props) {
                                         />
                                         {errors.analisa_tidak_memenuhi && (
                                             <p className="text-sm text-destructive">{errors.analisa_tidak_memenuhi}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="analisa_melebihi_standart" className="text-yellow-700">Analisa (Jika Melebihi Standart)</Label>
+                                        <Textarea
+                                            id="analisa_melebihi_standart"
+                                            value={data.analisa_melebihi_standart}
+                                            onChange={(e) => setData('analisa_melebihi_standart', e.target.value)}
+                                            placeholder="Contoh: Analisa hasil {kategori} di {ruangan} rata-rata {rata_rata} {satuan} belum memenuhi standar. Perlu evaluasi AC."
+                                            className="min-h-[100px]"
+                                        />
+                                        {errors.analisa_melebihi_standart && (
+                                            <p className="text-sm text-destructive">{errors.analisa_melebihi_standart}</p>
                                         )}
                                     </div>
                                 </div>

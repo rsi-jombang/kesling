@@ -22,13 +22,16 @@ class KategoriPengukuranController extends Controller
         $validated = $request->validate([
             'nama_kategori' => 'required|string|max:255|unique:kategori_pengukurans,nama_kategori',
             'satuan' => 'nullable|string|max:50',
-            'tipe_data' => 'required|string|in:numeric,string,boolean',
+            'tipe_data' => 'required|string|in:numeric,string,boolean,checklist_apar,rumus_ach',
+            'is_public' => 'boolean',
             'keterangan' => 'nullable|string',
             'analisa_memenuhi' => 'nullable|string',
             'analisa_tidak_memenuhi' => 'nullable|string',
+            'analisa_melebihi_standart' => 'nullable|string',
         ]);
 
         $validated['slug'] = Str::slug($validated['nama_kategori']);
+        $validated['is_public'] = $validated['is_public'] ?? false;
 
         KategoriPengukuran::create($validated);
 
@@ -40,13 +43,15 @@ class KategoriPengukuranController extends Controller
         $validated = $request->validate([
             'nama_kategori' => 'required|string|max:255|unique:kategori_pengukurans,nama_kategori,'.$kategori->id,
             'satuan' => 'nullable|string|max:50',
-            'tipe_data' => 'required|string|in:numeric,string,boolean',
+            'tipe_data' => 'required|string|in:numeric,string,boolean,checklist_apar,rumus_ach',
+            'is_public' => 'boolean',
             'keterangan' => 'nullable|string',
             'analisa_memenuhi' => 'nullable|string',
             'analisa_tidak_memenuhi' => 'nullable|string',
         ]);
 
         $validated['slug'] = Str::slug($validated['nama_kategori']);
+        $validated['is_public'] = $validated['is_public'] ?? false;
 
         $kategori->update($validated);
 

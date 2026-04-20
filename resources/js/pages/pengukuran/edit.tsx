@@ -13,6 +13,7 @@ interface KategoriPengukuran {
     id: number;
     nama_kategori: string;
     satuan: string;
+    tipe_data: string;
 }
 
 interface StandartPengukuran {
@@ -33,7 +34,8 @@ interface Pengukuran {
     id: number;
     ruangan_id: number;
     kategori_pengukuran_id: number;
-    value: number;
+    value: number | null;
+    detail_pengukuran: string | null;
     status: string;
     waktu_pengukuran: string;
     tanggal_pengukuran: string;
@@ -54,12 +56,20 @@ const SHIFT_META: Record<string, { label: string; icon: string }> = {
 };
 
 export default function Edit({ pengukuran, ruangans }: Props) {
+    let initialValue: any = pengukuran.value?.toString() ?? '';
+    const initTipeData = pengukuran.kategori_pengukuran.tipe_data;
+    if (initTipeData === 'checklist_apar' && pengukuran.detail_pengukuran) {
+        try { initialValue = JSON.parse(pengukuran.detail_pengukuran); } catch(e){}
+    } else if (initTipeData === 'rumus_ach' && pengukuran.detail_pengukuran) {
+        try { initialValue = JSON.parse(pengukuran.detail_pengukuran).input_laju_udara?.toString() ?? ''; } catch(e){}
+    }
+
     const { data, setData, put, processing, errors } = useForm({
         ruangan_id:             pengukuran.ruangan_id.toString(),
         kategori_pengukuran_id: pengukuran.kategori_pengukuran_id.toString(),
         tanggal_pengukuran:     pengukuran.tanggal_pengukuran,
         waktu_pengukuran:       pengukuran.waktu_pengukuran,
-        value:                  pengukuran.value.toString(),
+        value:                  initialValue,
         keterangan:             pengukuran.keterangan ?? '',
     });
 
@@ -73,7 +83,8 @@ export default function Edit({ pengukuran, ruangans }: Props) {
     const allKategoris = selectedRuangan?.standarts ?? [];
 
     // Live validation feedback
-    const numVal = parseFloat(data.value);
+    const type = selectedStandart?.kategori.tipe_data ?? initTipeData;
+    const numVal = typeof data.value === 'string' || typeof data.value === 'number' ? parseFloat(data.value as string) : NaN;
     const v1 = selectedStandart?.min_value != null ? parseFloat(selectedStandart.min_value as string) : null;
     const v2 = selectedStandart?.max_value != null ? parseFloat(selectedStandart.max_value as string) : null;
 
@@ -81,8 +92,21 @@ export default function Edit({ pengukuran, ruangans }: Props) {
     const min = (v1 !== null && v2 !== null) ? Math.min(v1, v2) : (v1 ?? null);
     const max = (v1 !== null && v2 !== null) ? Math.max(v1, v2) : (v2 ?? null);
 
-    const isFilled = data.value !== '' && !isNaN(numVal);
-    const isOk  = isFilled && (min === null || numVal >= min) && (max === null || numVal <= max);
+    let isFilled = false;
+    let isOk = false;
+    
+    if (type === 'checklist_apar') {
+        isFilled = data.value && Object.keys(data.value).length === 6;
+        isOk = isFilled && Object.values(data.value).every(v => v === 'baik');
+    } else {
+        isFilled = data.value !== '' && !isNaN(numVal) && data.value !== undefined && data.value !== null;
+        if (type === 'rumus_ach') {
+            isOk = isFilled;
+        } else {
+            isOk = isFilled && (min === null || numVal >= min) && (max === null || numVal <= max);
+        }
+    }
+
     const isNok = isFilled && !isOk;
 
     const handleSubmit = (e: FormEvent) => {
@@ -211,25 +235,52 @@ export default function Edit({ pengukuran, ruangans }: Props) {
                                     </span>
                                 )}
                             </div>
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    id="value"
-                                    placeholder="0.00"
-                                    value={data.value}
-                                    onChange={(e) => setData('value', e.target.value)}
-                                    className={`h-10 w-full pr-16 ${
-                                        isNok ? 'border-destructive'
-                                        : isOk ? 'border-emerald-400'
-                                        : errors.value ? 'border-destructive'
-                                        : ''
-                                    }`}
-                                />
-                                {selectedStandart && (
-                                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-muted-foreground">
-                                        {selectedStandart.kategori.satuan}
-                                    </span>
+                            <div className="relative mt-2">
+                                {type === 'checklist_apar' ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm bg-white p-3 rounded-md border">
+                                        {['Pressure Gauge', 'Pin / Segel', 'Selang', 'Klem Selang', 'Handle', 'Kondisi Fisik'].map((item) => {
+                                            const key = item.replace(/ /g, '_').replace(/\//g, '').toLowerCase();
+                                            const v = data.value as any;
+                                            return (
+                                                <div key={key} className="flex items-center justify-between py-1.5 border-b last:border-0 sm:nth-last-2:border-0">
+                                                    <span className="text-muted-foreground">{item}</span>
+                                                    <div className="flex gap-4 items-center">
+                                                        <label className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-600 transition-colors">
+                                                            <input type="radio" className="peer w-4 h-4 text-emerald-600" name={`edit_${key}`} checked={v?.[key] === 'baik'} onChange={() => setData('value', {...(v||{}), [key]: 'baik'} )} />
+                                                            <span className="font-medium peer-checked:text-emerald-700">V (Baik)</span>
+                                                        </label>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer hover:text-destructive transition-colors">
+                                                            <input type="radio" className="peer w-4 h-4 text-destructive" name={`edit_${key}`} checked={v?.[key] === 'rusak'} onChange={() => setData('value', {...(v||{}), [key]: 'rusak'} )} />
+                                                            <span className="font-medium peer-checked:text-destructive">X (Rusak)</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <>
+                                        {type === 'rumus_ach' && <Label className="text-xs text-muted-foreground mb-1 block">Input Laju Udara AC / Kipas Angin (m/s)</Label>}
+                                        <Input
+                                            type="number"
+                                            step="any"
+                                            id="value"
+                                            placeholder={type === 'rumus_ach' ? "Contoh: 0.8" : "0.00"}
+                                            value={data.value as string}
+                                            onChange={(e) => setData('value', e.target.value)}
+                                            className={`h-10 w-full pr-16 ${
+                                                isNok ? 'border-destructive'
+                                                : isOk ? 'border-emerald-400'
+                                                : errors.value as any ? 'border-destructive'
+                                                : ''
+                                            }`}
+                                        />
+                                        {selectedStandart && type !== 'rumus_ach' && (
+                                            <span className="pointer-events-none absolute bottom-3 right-3 flex items-center text-xs font-semibold text-muted-foreground">
+                                                {selectedStandart.kategori.satuan}
+                                            </span>
+                                        )}
+                                    </>
                                 )}
                             </div>
                             {/* Live feedback */}

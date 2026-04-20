@@ -201,8 +201,14 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
             const ruangan = ruangans.find((r) => r.id === parseInt(data.ruangan_id));
             if (ruangan) {
                 setSelectedRuangan(ruangan);
-                const init: Record<number, string> = {};
-                ruangan.standarts.forEach((s) => { init[s.kategori_pengukuran_id] = ''; });
+                const init: Record<number, any> = {};
+                ruangan.standarts.forEach((s) => { 
+                    if (s.kategori?.tipe_data === 'checklist_apar') {
+                        init[s.kategori_pengukuran_id] = {};
+                    } else {
+                        init[s.kategori_pengukuran_id] = ''; 
+                    }
+                });
                 setData('measurements', init);
             }
         } else {
@@ -221,8 +227,11 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
 
     const filledCount = selectedRuangan
         ? selectedRuangan.standarts.filter((s) => {
-              const v = data.measurements[s.kategori_pengukuran_id];
-              return v !== '' && v !== undefined;
+              const val = data.measurements[s.kategori_pengukuran_id];
+              if (s.kategori?.tipe_data === 'checklist_apar') {
+                  return val && Object.keys(val).length === 6;
+              }
+              return val !== '' && val !== undefined;
           }).length
         : 0;
     const totalCount = selectedRuangan?.standarts.length ?? 0;
@@ -471,8 +480,9 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                             {selectedRuangan ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {selectedRuangan.standarts.map((std) => {
+                                        const type   = std.kategori.tipe_data;
                                         const val    = data.measurements[std.kategori_pengukuran_id];
-                                        const numVal = parseFloat(val as string);
+                                        const numVal = typeof val === 'string' || typeof val === 'number' ? parseFloat(val as string) : NaN;
                                         const v1     = std.min_value != null ? parseFloat(std.min_value as string) : null;
                                         const v2     = std.max_value != null ? parseFloat(std.max_value as string) : null;
 
@@ -480,8 +490,21 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                         const min    = (v1 !== null && v2 !== null) ? Math.min(v1, v2) : (v1 ?? null);
                                         const max    = (v1 !== null && v2 !== null) ? Math.max(v1, v2) : (v2 ?? null);
 
-                                        const filled = val !== '' && val !== undefined && !isNaN(numVal);
-                                        const ok     = filled && (min === null || numVal >= min) && (max === null || numVal <= max);
+                                        let filled = false;
+                                        let ok = false;
+                                        
+                                        if (type === 'checklist_apar') {
+                                            filled = val && Object.keys(val).length === 6;
+                                            ok = filled && Object.values(val).every(v => v === 'baik');
+                                        } else {
+                                            filled = val !== '' && !isNaN(numVal) && val !== undefined;
+                                            if (type === 'rumus_ach') {
+                                                ok = filled;
+                                            } else {
+                                                ok = filled && (min === null || numVal >= min) && (max === null || numVal <= max);
+                                            }
+                                        }
+
                                         const nok    = filled && !ok;
 
                                         return (
@@ -497,8 +520,13 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                                             <Thermometer className="h-4.5 w-4.5" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">{std.kategori.nama_kategori}</p>
-                                                            <p className="text-[11px] font-bold">Standard: <span className="italic opacity-80">{std.min_value ?? '∞'} – {std.max_value ?? '∞'}</span></p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">{std.kategori.nama_kategori}</p>
+                                                                {type === 'rumus_ach' && <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-[1px] rounded-full font-bold">ACH (Otomatis)</span>}
+                                                            </div>
+                                                            {type !== 'checklist_apar' && type !== 'rumus_ach' && (
+                                                                <p className="text-[11px] font-bold">Standard: <span className="italic opacity-80">{std.min_value ?? '∞'} – {std.max_value ?? '∞'} {std.kategori.satuan}</span></p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     {ok && <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={3} />}
@@ -506,14 +534,42 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                                 </div>
 
                                                 <div className="relative">
-                                                    <Input
-                                                        type="number" step="0.01" placeholder="0.00"
-                                                        onFocus={() => setFocusedField(std.id)} onBlur={() => setFocusedField(null)}
-                                                        className={cn("h-14 w-full rounded-2xl border-none bg-white dark:bg-slate-900 px-5 pr-14 text-xl font-black shadow-inner transition-all outline-none ring-0 focus:ring-2 focus:ring-blue-500/20", ok ? "text-emerald-700 dark:text-emerald-400" : nok ? "text-red-700 dark:text-red-400" : "text-slate-900 dark:text-white")}
-                                                        value={data.measurements[std.kategori_pengukuran_id] ?? ''}
-                                                        onChange={(e) => setData('measurements', { ...data.measurements, [std.kategori_pengukuran_id]: e.target.value })}
-                                                    />
-                                                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black uppercase text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg">{std.kategori.satuan}</span>
+                                                    {type === 'checklist_apar' ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                                                            {['Pressure Gauge', 'Pin / Segel', 'Selang', 'Klem Selang', 'Handle', 'Kondisi Fisik'].map((item) => {
+                                                                const key = item.replace(/ /g, '_').replace(/\//g, '').toLowerCase();
+                                                                return (
+                                                                    <div key={key} className="flex items-center justify-between py-1.5 border-b border-slate-200/60 dark:border-slate-700/60 last:border-0 sm:nth-last-2:border-0">
+                                                                        <span className="text-slate-600 dark:text-slate-300 font-medium text-xs">{item}</span>
+                                                                        <div className="flex gap-4 items-center">
+                                                                            <label className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-600 transition-colors">
+                                                                                <input type="radio" className="peer w-3 h-3 text-emerald-600 focus:ring-emerald-500" name={`pub_${std.id}_${key}`} checked={val?.[key] === 'baik'} onChange={() => setData('measurements', {...data.measurements, [std.kategori_pengukuran_id]: {...(val||{}), [key]: 'baik'} })} />
+                                                                                <span className="font-bold text-[10px] peer-checked:text-emerald-600 text-slate-400">V (Baik)</span>
+                                                                            </label>
+                                                                            <label className="flex items-center gap-1.5 cursor-pointer hover:text-red-500 transition-colors">
+                                                                                <input type="radio" className="peer w-3 h-3 text-red-500 focus:ring-red-500" name={`pub_${std.id}_${key}`} checked={val?.[key] === 'rusak'} onChange={() => setData('measurements', {...data.measurements, [std.kategori_pengukuran_id]: {...(val||{}), [key]: 'rusak'} })} />
+                                                                                <span className="font-bold text-[10px] peer-checked:text-red-500 text-slate-400">X (Rusak)</span>
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            {type === 'rumus_ach' && <Label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Laju Udara AC/Kipas (m/s)</Label>}
+                                                            <Input
+                                                                type="number" step="any" placeholder={type === 'rumus_ach' ? "0.0" : "0.00"}
+                                                                onFocus={() => setFocusedField(std.id)} onBlur={() => setFocusedField(null)}
+                                                                className={cn("h-14 w-full rounded-2xl border-none bg-white dark:bg-slate-900 px-5 pr-14 text-xl font-black shadow-inner transition-all outline-none ring-0 focus:ring-2 focus:ring-blue-500/20", ok ? "text-emerald-700 dark:text-emerald-400" : nok ? "text-red-700 dark:text-red-400" : "text-slate-900 dark:text-white")}
+                                                                value={val ?? ''}
+                                                                onChange={(e) => setData('measurements', { ...data.measurements, [std.kategori_pengukuran_id]: e.target.value })}
+                                                            />
+                                                            {type !== 'rumus_ach' && (
+                                                                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black uppercase text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg">{std.kategori.satuan}</span>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         );

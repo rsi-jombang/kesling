@@ -10,6 +10,10 @@ class Ruangan extends Model
     protected $fillable = [
         'nama_ruangan',
         'nama_kasi',
+        'panjang',
+        'lebar',
+        'tinggi',
+        'luas_ventilasi_statis',
     ];
 
     public function pengukurans()

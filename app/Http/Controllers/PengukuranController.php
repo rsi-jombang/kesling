@@ -49,17 +49,42 @@ class PengukuranController extends Controller
             'tanggal_pengukuran'  => 'required|date',
             'waktu_pengukuran'    => 'required|in:pagi,siang,malam',
             'measurements'        => 'required|array',
-            'measurements.*'      => 'nullable|numeric',
+            'measurements.*'      => 'nullable',
         ]);
 
         foreach ($request->measurements as $kategoriId => $value) {
             if ($value === null || $value === '') continue;
 
+            $kategori = KategoriPengukuran::find($kategoriId);
+            $realValue = $value;
+            $detailData = null;
+
+            if ($kategori && $kategori->tipe_data === 'checklist_apar') {
+                $realValue = null;
+                $detailData = is_array($value) ? json_encode($value) : $value;
+            } elseif ($kategori && $kategori->tipe_data === 'rumus_ach') {
+                $ruang = Ruangan::find($request->ruangan_id);
+                $volume = $ruang->panjang * $ruang->lebar * $ruang->tinggi;
+                $luas_ventilasi = $ruang->luas_ventilasi_statis + (float)$value;
+                $laju_ventilasi = $luas_ventilasi * 60;
+                $pertukaran = $laju_ventilasi + (float)$value;
+                $ach = $volume > 0 ? $pertukaran / $volume : 0;
+                
+                $realValue = round($ach, 2);
+                $detailData = json_encode([
+                    'input_laju_udara' => $value,
+                    'volume' => $volume,
+                    'luas_ventilasi' => $luas_ventilasi,
+                    'pertukaran' => $pertukaran
+                ]);
+            }
+
             Pengukuran::create([
                 'slug'                  => (string) Str::uuid(),
                 'ruangan_id'            => $request->ruangan_id,
                 'kategori_pengukuran_id'=> $kategoriId,
-                'value'                 => $value,
+                'value'                 => $realValue,
+                'detail_pengukuran'     => $detailData,
                 'waktu_pengukuran'      => $request->waktu_pengukuran,
                 'tanggal_pengukuran'    => $request->tanggal_pengukuran,
                 'keterangan'            => $request->keterangan ?? null,
@@ -85,18 +110,43 @@ class PengukuranController extends Controller
             'kategori_pengukuran_id'    => 'required|exists:kategori_pengukurans,id',
             'tanggal_pengukuran'        => 'required|date',
             'waktu_pengukuran'          => 'required|in:pagi,siang,malam',
-            'value'                     => 'required|numeric',
+            'value'                     => 'nullable',
             'keterangan'                => 'nullable|string',
         ]);
 
-        $pengukuran->update($request->only([
-            'ruangan_id',
-            'kategori_pengukuran_id',
-            'tanggal_pengukuran',
-            'waktu_pengukuran',
-            'value',
-            'keterangan',
-        ]));
+        $kategori = KategoriPengukuran::find($request->kategori_pengukuran_id);
+        $realValue = $request->value;
+        $detailData = $pengukuran->detail_pengukuran;
+
+        if ($kategori && $kategori->tipe_data === 'checklist_apar') {
+            $realValue = null;
+            $detailData = is_array($request->value) ? json_encode($request->value) : $request->value;
+        } elseif ($kategori && $kategori->tipe_data === 'rumus_ach') {
+            $ruang = Ruangan::find($request->ruangan_id);
+            $volume = $ruang->panjang * $ruang->lebar * $ruang->tinggi;
+            $luas_ventilasi = $ruang->luas_ventilasi_statis + (float)$request->value;
+            $laju_ventilasi = $luas_ventilasi * 60;
+            $pertukaran = $laju_ventilasi + (float)$request->value;
+            $ach = $volume > 0 ? $pertukaran / $volume : 0;
+            
+            $realValue = round($ach, 2);
+            $detailData = json_encode([
+                'input_laju_udara' => $request->value,
+                'volume' => $volume,
+                'luas_ventilasi' => $luas_ventilasi,
+                'pertukaran' => $pertukaran
+            ]);
+        }
+
+        $pengukuran->update([
+            'ruangan_id' => $request->ruangan_id,
+            'kategori_pengukuran_id' => $request->kategori_pengukuran_id,
+            'tanggal_pengukuran' => $request->tanggal_pengukuran,
+            'waktu_pengukuran' => $request->waktu_pengukuran,
+            'value' => $realValue,
+            'detail_pengukuran' => $detailData,
+            'keterangan' => $request->keterangan,
+        ]);
 
         return redirect()->route('pengukuran.index')
             ->with('success', 'Data pengukuran berhasil diperbarui.');

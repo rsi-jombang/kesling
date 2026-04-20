@@ -45,6 +45,10 @@ class RuanganController extends Controller
         $request->validate([
             'nama_ruangan' => 'required|string|max:255',
             'nama_kasi' => 'nullable|string|max:255',
+            'panjang' => 'nullable|numeric|min:0',
+            'lebar' => 'nullable|numeric|min:0',
+            'tinggi' => 'nullable|numeric|min:0',
+            'luas_ventilasi_statis' => 'nullable|numeric|min:0',
             'standarts' => 'nullable|array',
             'standarts.*.kategori_id' => 'required|exists:kategori_pengukurans,id',
             'standarts.*.min_value' => 'nullable|numeric',
@@ -54,17 +58,22 @@ class RuanganController extends Controller
         $ruangan = Ruangan::create([
             'nama_ruangan' => $request->nama_ruangan,
             'nama_kasi' => $request->nama_kasi,
+            'panjang' => $request->panjang ?? 0,
+            'lebar' => $request->lebar ?? 0,
+            'tinggi' => $request->tinggi ?? 0,
+            'luas_ventilasi_statis' => $request->luas_ventilasi_statis ?? 0,
         ]);
 
         if ($request->has('standarts')) {
             foreach ($request->standarts as $std) {
-                if ($std['min_value'] !== null || $std['max_value'] !== null) {
+                $kategori = KategoriPengukuran::find($std['kategori_id']);
+                if ($std['min_value'] !== null || $std['max_value'] !== null || $kategori->tipe_data === 'checklist_apar') {
                     StandartPengukuran::create([
                         'ruangan_id' => $ruangan->id,
                         'kategori_pengukuran_id' => $std['kategori_id'],
                         'min_value' => $std['min_value'],
                         'max_value' => $std['max_value'],
-                        'satuan' => KategoriPengukuran::find($std['kategori_id'])->satuan,
+                        'satuan' => $kategori->satuan,
                     ]);
                 }
             }
@@ -92,6 +101,10 @@ class RuanganController extends Controller
         $request->validate([
             'nama_ruangan' => 'required|string|max:255',
             'nama_kasi' => 'nullable|string|max:255',
+            'panjang' => 'nullable|numeric|min:0',
+            'lebar' => 'nullable|numeric|min:0',
+            'tinggi' => 'nullable|numeric|min:0',
+            'luas_ventilasi_statis' => 'nullable|numeric|min:0',
             'standarts' => 'nullable|array',
             'standarts.*.kategori_id' => 'required|exists:kategori_pengukurans,id',
             'standarts.*.min_value' => 'nullable|numeric',
@@ -101,6 +114,10 @@ class RuanganController extends Controller
         $ruangan->update([
             'nama_ruangan' => $request->nama_ruangan,
             'nama_kasi' => $request->nama_kasi,
+            'panjang' => $request->panjang ?? 0,
+            'lebar' => $request->lebar ?? 0,
+            'tinggi' => $request->tinggi ?? 0,
+            'luas_ventilasi_statis' => $request->luas_ventilasi_statis ?? 0,
         ]);
 
         // Sync standards: Delete existing and recreate
@@ -108,13 +125,14 @@ class RuanganController extends Controller
 
         if ($request->has('standarts')) {
             foreach ($request->standarts as $std) {
-                if ($std['min_value'] !== null || $std['max_value'] !== null) {
+                $kategori = KategoriPengukuran::find($std['kategori_id']);
+                if ($std['min_value'] !== null || $std['max_value'] !== null || $kategori->tipe_data === 'checklist_apar') {
                     StandartPengukuran::create([
                         'ruangan_id' => $ruangan->id,
                         'kategori_pengukuran_id' => $std['kategori_id'],
                         'min_value' => $std['min_value'],
                         'max_value' => $std['max_value'],
-                        'satuan' => KategoriPengukuran::find($std['kategori_id'])->satuan,
+                        'satuan' => $kategori->satuan,
                     ]);
                 }
             }

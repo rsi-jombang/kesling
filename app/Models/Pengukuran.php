@@ -15,6 +15,7 @@ class Pengukuran extends Model
         'waktu_pengukuran',
         'tanggal_pengukuran',
         'keterangan',
+        'detail_pengukuran',
     ];
 
     protected static function booted(): void
@@ -23,6 +24,24 @@ class Pengukuran extends Model
             $standart = StandartPengukuran::where('ruangan_id', $pengukuran->ruangan_id)
                 ->where('kategori_pengukuran_id', $pengukuran->kategori_pengukuran_id)
                 ->first();
+            $kategori = KategoriPengukuran::find($pengukuran->kategori_pengukuran_id);
+
+            // Special handling for APAR Checklists
+            if ($kategori && $kategori->tipe_data === 'checklist_apar') {
+                $details = is_string($pengukuran->detail_pengukuran) ? json_decode($pengukuran->detail_pengukuran, true) : $pengukuran->detail_pengukuran;
+                if (is_array($details)) {
+                    $memenuhi = true;
+                    foreach ($details as $key => $val) {
+                        if ($val !== 'baik' && $val !== true && $val !== 1 && $val !== '1') {
+                            $memenuhi = false;
+                        }
+                    }
+                    $pengukuran->status = $memenuhi ? 'memenuhi' : 'tidak memenuhi';
+                } else {
+                    $pengukuran->status = 'tidak memenuhi';
+                }
+                return;
+            }
 
             if (! $standart) {
                 $pengukuran->status = 'tidak memenuhi';

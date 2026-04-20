@@ -12,8 +12,10 @@ class KategoriPengukuran extends Model
         'satuan',
         'tipe_data',
         'keterangan',
+        'is_public',
         'analisa_memenuhi',
         'analisa_tidak_memenuhi',
+        'analisa_melebihi_standart',
     ];
 
     public function pengukurans()
