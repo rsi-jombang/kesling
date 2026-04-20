@@ -37,6 +37,8 @@ class KeslingSeeder extends Seeder
                 'slug' => 'suhu-ruang',
                 'analisa_memenuhi' => 'Analisa hasil monitoring engineering {kategori} di {ruangan} (rata-rata: {rata_rata} {satuan}) selama satu bulan dilihat dari alat pengukur suhu ruang telah memenuhi standar. Pemeliharaan rutin pada sistem pendingin udara perlu dipertahankan.',
                 'analisa_tidak_memenuhi' => 'Analisa hasil monitoring engineering {kategori} di {ruangan} (rata-rata: {rata_rata} {satuan}) selama satu bulan dilihat dari alat pengukur suhu ruang belum memenuhi standar. Sehingga perlu dilakukan pengaturan suhu pada pendingin udara dan pemeliharaan jika memakai AC, jika ruangan tidak memakai AC bisa menambahkan exhaust.',
+                'analisa_melebihi_standart' => 'Analisa hasil monitoring engineering {kategori} di {ruangan} (rata-rata: {rata_rata} {satuan}) selama satu bulan dilihat dari alat pengukur suhu ruang belum memenuhi standar. Sehingga perlu dilakukan pengaturan suhu pada pendingin udara dan pemeliharaan jika memakai AC, jika ruangan tidak memakai AC bisa menambahkan exhaust.',
+                'is_input_2_times' => false,
             ],
             [
                 'nama_kategori' => 'Kelembaban Relatif',
@@ -45,6 +47,8 @@ class KeslingSeeder extends Seeder
                 'slug' => 'kelembaban-relatif',
                 'analisa_memenuhi' => 'Analisa hasil monitoring {kategori} di {ruangan} dengan rata-rata {rata_rata}{satuan} telah memenuhi standar kesehatan lingkungan. Kondisi ini mendukung kenyamanan pasien dan mencegah pertumbuhan jamur.',
                 'analisa_tidak_memenuhi' => 'Analisa hasil monitoring {kategori} di {ruangan} dengan rata-rata {rata_rata}{satuan} belum memenuhi standar. Kelembaban yang terlalu tinggi/rendah dapat mengganggu kesehatan. Disarankan pengecekan filter AC, penggunaan dehumidifier, atau perbaikan sirkulasi udara.',
+                'analisa_melebihi_standart' => 'Analisa hasil monitoring {kategori} di {ruangan} dengan rata-rata {rata_rata}{satuan} belum memenuhi standar. Kelembaban yang terlalu tinggi/rendah dapat mengganggu kesehatan. Disarankan pengecekan filter AC, penggunaan dehumidifier, atau perbaikan sirkulasi udara.',
+                'is_input_2_times' => false,
             ],
             [
                 'nama_kategori' => 'Kadar CO₂',
@@ -53,6 +57,8 @@ class KeslingSeeder extends Seeder
                 'slug' => 'kadar-co2',
                 'analisa_memenuhi' => 'Monitoring {kategori} di {ruangan} menunjukkan rata-rata {rata_rata} {satuan}, berada dalam batas aman standar ventilasi ruangan yang baik.',
                 'analisa_tidak_memenuhi' => 'Kadar {kategori} di {ruangan} rata-rata mencapai {rata_rata} {satuan}, melebihi ambang batas yang disarankan. Hal ini mengindikasikan ventilasi yang kurang memadai. Segera optimalkan pertukaran udara segar (air change rate) di ruangan tersebut.',
+                'analisa_melebihi_standart' => 'Kadar {kategori} di {ruangan} rata-rata mencapai {rata_rata} {satuan}, melebihi ambang batas yang disarankan. Hal ini mengindikasikan ventilasi yang kurang memadai. Segera optimalkan pertukaran udara segar (air change rate) di ruangan tersebut.',
+                'is_input_2_times' => false,
             ],
             [
                 'nama_kategori' => 'Tingkat Kebisingan',
@@ -61,6 +67,8 @@ class KeslingSeeder extends Seeder
                 'slug' => 'tingkat-kebisingan',
                 'analisa_memenuhi' => 'Tingkat kebisingan di {ruangan} (rata-rata: {rata_rata} {satuan}) telah memenuhi standar kebisingan untuk area rumah sakit, mendukung ketenangan istirahat pasien.',
                 'analisa_tidak_memenuhi' => 'Tingkat kebisingan di {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar ketenangan. Perlu dilakukan pengecekan sumber bising (mesin/aktivitas) dan upaya peredaman atau pengaturan jadwal operasional alat berat.',
+                'analisa_melebihi_standart' => 'Tingkat kebisingan di {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar ketenangan. Perlu dilakukan pengecekan sumber bising (mesin/aktivitas) dan upaya peredaman atau pengaturan jadwal operasional alat berat.',
+                'is_input_2_times' => false,
             ],
             [
                 'nama_kategori' => 'Pencahayaan',
@@ -69,6 +77,8 @@ class KeslingSeeder extends Seeder
                 'slug' => 'pencahayaan',
                 'analisa_memenuhi' => 'Hasil pemantauan {kategori} di {ruangan} rata-rata {rata_rata} {satuan}, sudah memenuhi standar minimal pencahayaan untuk mendukung fungsi medis di ruangan tersebut.',
                 'analisa_tidak_memenuhi' => 'Hasil pemantauan {kategori} di {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar pencahayaan. Disarankan penggantian lampu dengan daya yang sesuai, penambahan titik lampu, atau pembersihan kap lampu secara rutin.',
+                'analisa_melebihi_standart' => 'Hasil pemantauan {kategori} di {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar pencahayaan. Disarankan penggantian lampu dengan daya yang sesuai, penambahan titik lampu, atau pembersihan kap lampu secara rutin.',
+                'is_input_2_times' => false,
             ],
             [
                 'nama_kategori' => 'Kecepatan Udara',
@@ -77,6 +87,18 @@ class KeslingSeeder extends Seeder
                 'slug' => 'kecepatan-udara',
                 'analisa_memenuhi' => 'Aliran udara di {ruangan} dengan rata-rata {rata_rata} {satuan} telah memenuhi standar distribusi udara yang sehat.',
                 'analisa_tidak_memenuhi' => 'Laju aliran udara di {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar sirkulasi. Perlu dilakukan pengecekan pada sistem diffuser, pembersihan filter, atau penyesuaian kecepatan fan pada unit AHU/AC.',
+                'analisa_melebihi_standart' => 'Laju aliran udara di {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar sirkulasi. Perlu dilakukan pengecekan pada sistem diffuser, pembersihan filter, atau penyesuaian kecepatan fan pada unit AHU/AC.',
+                'is_input_2_times' => false,
+            ],
+            [
+                'nama_kategori' => 'Blood Bank Refrigator',
+                'satuan' => '°C',
+                'tipe_data' => 'numeric',
+                'slug' => 'blood-bank-refrigator',
+                'analisa_memenuhi' => 'Hasil monitoring {kategori} {ruangan} rata-rata {rata_rata} {satuan} telah memenuhi standar distribusi udara yang sehat.',
+                'analisa_tidak_memenuhi' => 'Hasil monitoring {kategori} {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar sirkulasi. Perlu dilakukan pengecekan pada sistem diffuser, pembersihan filter, atau penyesuaian kecepatan fan pada unit AHU/AC.',
+                'analisa_melebihi_standart' => 'Hasil monitoring {kategori} {ruangan} rata-rata {rata_rata} {satuan}, belum memenuhi standar sirkulasi. Perlu dilakukan pengecekan pada sistem diffuser, pembersihan filter, atau penyesuaian kecepatan fan pada unit AHU/AC.',
+                'is_input_2_times' => true,
             ],
         ];
 

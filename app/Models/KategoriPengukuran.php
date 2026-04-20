@@ -16,6 +16,7 @@ class KategoriPengukuran extends Model
         'analisa_memenuhi',
         'analisa_tidak_memenuhi',
         'analisa_melebihi_standart',
+        'is_input_2_times',
     ];
 
     public function pengukurans()

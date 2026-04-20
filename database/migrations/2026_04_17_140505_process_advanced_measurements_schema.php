@@ -14,9 +14,11 @@ return new class extends Migration
         Schema::table('kategori_pengukurans', function (Blueprint $table) {
             $table->boolean('is_public')->default(false)->after('tipe_data');
             $table->text('analisa_melebihi_standart')->nullable()->after('analisa_tidak_memenuhi');
+            $table->boolean('is_input_2_times')->default(false)->after('analisa_melebihi_standart')->comment('input 2 kali dalam satu shift');
         });
 
         Schema::table('ruangans', function (Blueprint $table) {
+            $table->string('nama_kasi')->nullable()->after('nama_ruangan');
             $table->decimal('panjang', 8, 2)->default(0)->after('nama_kasi');
             $table->decimal('lebar', 8, 2)->default(0)->after('panjang');
             $table->decimal('tinggi', 8, 2)->default(0)->after('lebar');
@@ -37,11 +39,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('kategori_pengukurans', function (Blueprint $table) {
-            $table->dropColumn('is_public');
+            $table->dropColumn(['is_public', 'is_input_2_times', 'analisa_melebihi_standart']);
         });
 
         Schema::table('ruangans', function (Blueprint $table) {
-            $table->dropColumn(['panjang', 'lebar', 'tinggi', 'luas_ventilasi_statis']);
+            $table->dropColumn(['nama_kasi', 'panjang', 'lebar', 'tinggi', 'luas_ventilasi_statis']);
         });
 
         Schema::table('pengukurans', function (Blueprint $table) {
