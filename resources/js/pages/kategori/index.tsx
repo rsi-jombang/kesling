@@ -49,6 +49,7 @@ interface Kategori {
     analisa_memenuhi: string | null;
     analisa_tidak_memenuhi: string | null;
     analisa_melebihi_standart: string | null;
+    is_input_2_times: boolean;
 }
 
 interface Props {
@@ -70,6 +71,7 @@ export default function Index({ kategoris }: Props) {
         analisa_memenuhi: '',
         analisa_tidak_memenuhi: '',
         analisa_melebihi_standart: '',
+        is_input_2_times: false,
     });
 
     const openCreateDialog = () => {
@@ -89,6 +91,8 @@ export default function Index({ kategoris }: Props) {
             keterangan: kategori.keterangan || '',
             analisa_memenuhi: kategori.analisa_memenuhi || '',
             analisa_tidak_memenuhi: kategori.analisa_tidak_memenuhi || '',
+            analisa_melebihi_standart: kategori.analisa_melebihi_standart || '',
+            is_input_2_times: kategori.is_input_2_times || false,
         });
         clearErrors();
         setIsDialogOpen(true);
@@ -142,6 +146,7 @@ export default function Index({ kategoris }: Props) {
                                 <TableHead>Nama Kategori</TableHead>
                                 <TableHead>Satuan</TableHead>
                                 <TableHead>Tipe Data</TableHead>
+                                <TableHead>Input 2x</TableHead>
                                 <TableHead className="text-right">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -173,6 +178,13 @@ export default function Index({ kategoris }: Props) {
                                                     <Badge variant="outline" className="text-[10px]">Privat</Badge>
                                                 )}
                                             </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {kategori.is_input_2_times ? (
+                                                <Badge variant="default" className="text-[10px] bg-blue-500 hover:bg-blue-600">Ya</Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-[10px]">Tidak</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
@@ -267,6 +279,19 @@ export default function Index({ kategoris }: Props) {
                                     <div className="flex flex-col">
                                         <span className="font-medium text-sm">Akses Publik (Tanpa Login)</span>
                                         <span className="text-xs text-muted-foreground w-full font-normal">Kategori ini bisa diisi orang umum via scan QR/Link Publik.</span>
+                                    </div>
+                                </Label>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label className="flex items-center gap-2 cursor-pointer border p-3 rounded-md hover:bg-secondary/20">
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+                                        checked={data.is_input_2_times}
+                                        onChange={(e) => setData('is_input_2_times', e.target.checked)} />
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-sm">Input 2 Kali</span>
+                                        <span className="text-xs text-muted-foreground w-full font-normal">Kategori ini bisa diisi 2 kali dalam satu shift.</span>
                                     </div>
                                 </Label>
                             </div>

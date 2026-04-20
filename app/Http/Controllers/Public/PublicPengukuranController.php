@@ -19,7 +19,7 @@ class PublicPengukuranController extends Controller
                 $q->where('is_public', true);
             })->with('kategori');
         }])->orderBy('nama_ruangan')->get();
-        
+
         // Hanya ambil kategori yang diizinkan untuk publik (untuk report/chart filter)
         $kategoris = KategoriPengukuran::where('is_public', true)->orderBy('nama_kategori')->get(['id', 'nama_kategori', 'satuan']);
 
@@ -74,7 +74,7 @@ class PublicPengukuranController extends Controller
                 $laju_ventilasi = $luas_ventilasi * 60;
                 $pertukaran = $laju_ventilasi + (float)$value;
                 $ach = $volume > 0 ? $pertukaran / $volume : 0;
-                
+
                 $realValue = round($ach, 2);
                 $detailData = json_encode([
                     'input_laju_udara' => $value,

@@ -202,11 +202,11 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
             if (ruangan) {
                 setSelectedRuangan(ruangan);
                 const init: Record<number, any> = {};
-                ruangan.standarts.forEach((s) => { 
+                ruangan.standarts.forEach((s) => {
                     if (s.kategori?.tipe_data === 'checklist_apar') {
                         init[s.kategori_pengukuran_id] = {};
                     } else {
-                        init[s.kategori_pengukuran_id] = ''; 
+                        init[s.kategori_pengukuran_id] = '';
                     }
                 });
                 setData('measurements', init);
@@ -492,7 +492,7 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
 
                                         let filled = false;
                                         let ok = false;
-                                        
+
                                         if (type === 'checklist_apar') {
                                             filled = val && Object.keys(val).length === 6;
                                             ok = filled && Object.values(val).every(v => v === 'baik');

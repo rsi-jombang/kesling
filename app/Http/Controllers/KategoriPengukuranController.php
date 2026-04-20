@@ -28,10 +28,12 @@ class KategoriPengukuranController extends Controller
             'analisa_memenuhi' => 'nullable|string',
             'analisa_tidak_memenuhi' => 'nullable|string',
             'analisa_melebihi_standart' => 'nullable|string',
+            'is_input_2_times' => 'boolean',
         ]);
 
         $validated['slug'] = Str::slug($validated['nama_kategori']);
         $validated['is_public'] = $validated['is_public'] ?? false;
+        $validated['is_input_2_times'] = $validated['is_input_2_times'] ?? false;
 
         KategoriPengukuran::create($validated);
 
@@ -48,10 +50,13 @@ class KategoriPengukuranController extends Controller
             'keterangan' => 'nullable|string',
             'analisa_memenuhi' => 'nullable|string',
             'analisa_tidak_memenuhi' => 'nullable|string',
+            'analisa_melebihi_standart' => 'nullable|string',
+            'is_input_2_times' => 'boolean',
         ]);
 
         $validated['slug'] = Str::slug($validated['nama_kategori']);
         $validated['is_public'] = $validated['is_public'] ?? false;
+        $validated['is_input_2_times'] = $validated['is_input_2_times'] ?? false;
 
         $kategori->update($validated);
 

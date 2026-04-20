@@ -6,7 +6,9 @@ use App\Models\KategoriPengukuran;
 use App\Models\Pengukuran;
 use App\Models\Ruangan;
 use App\Models\StandartPengukuran;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -20,17 +22,17 @@ class PengukuranController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('ruangan', function($sq) use ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('ruangan', function ($sq) use ($search) {
                     $sq->where('nama_ruangan', 'like', "%{$search}%");
-                })->orWhereHas('kategori_pengukuran', function($sq) use ($search) {
+                })->orWhereHas('kategori_pengukuran', function ($sq) use ($search) {
                     $sq->where('nama_kategori', 'like', "%{$search}%");
                 });
             });
         }
 
         return Inertia::render('pengukuran/index', [
-            'data'    => $query->paginate(10)->withQueryString(),
+            'data' => $query->paginate(10)->withQueryString(),
             'filters' => $request->only(['search']),
         ]);
     }
@@ -45,73 +47,97 @@ class PengukuranController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'ruangan_id'          => 'required|exists:ruangans,id',
-            'tanggal_pengukuran'  => 'required|date',
-            'waktu_pengukuran'    => 'required|in:pagi,siang,malam',
-            'measurements'        => 'required|array',
-            'measurements.*'      => 'nullable',
+            'ruangan_id' => 'required|exists:ruangans,id',
+            'tanggal_pengukuran' => 'required|date',
+            'waktu_pengukuran' => 'required|in:pagi,siang,malam',
+            'measurements' => 'required|array',
+            'measurements.*' => 'nullable',
         ]);
 
-        foreach ($request->measurements as $kategoriId => $value) {
-            if ($value === null || $value === '') continue;
+        DB::beginTransaction();
 
-            $kategori = KategoriPengukuran::find($kategoriId);
-            $realValue = $value;
-            $detailData = null;
+        try {
+            foreach ($request->measurements as $kategoriId => $value) {
+                if ($value === null || $value === '')
+                    continue;
 
-            if ($kategori && $kategori->tipe_data === 'checklist_apar') {
-                $realValue = null;
-                $detailData = is_array($value) ? json_encode($value) : $value;
-            } elseif ($kategori && $kategori->tipe_data === 'rumus_ach') {
-                $ruang = Ruangan::find($request->ruangan_id);
-                $volume = $ruang->panjang * $ruang->lebar * $ruang->tinggi;
-                $luas_ventilasi = $ruang->luas_ventilasi_statis + (float)$value;
-                $laju_ventilasi = $luas_ventilasi * 60;
-                $pertukaran = $laju_ventilasi + (float)$value;
-                $ach = $volume > 0 ? $pertukaran / $volume : 0;
-                
-                $realValue = round($ach, 2);
-                $detailData = json_encode([
-                    'input_laju_udara' => $value,
-                    'volume' => $volume,
-                    'luas_ventilasi' => $luas_ventilasi,
-                    'pertukaran' => $pertukaran
+                $kategori = KategoriPengukuran::find($kategoriId);
+                $realValue = $value;
+                $detailData = null;
+
+                $existing = Pengukuran::where('ruangan_id', $request->ruangan_id)
+                    ->where('kategori_pengukuran_id', $kategoriId)
+                    ->where('tanggal_pengukuran', $request->tanggal_pengukuran)
+                    ->where('waktu_pengukuran', $request->waktu_pengukuran)
+                    ->first();
+
+                if ($existing && !$kategori->is_input_2_times) {
+                    DB::rollBack();
+                    return back()->withErrors([
+                        'measurements' => "Data untuk kategori {$kategori->nama_kategori} sudah ada untuk ruangan ini pada shift ini."
+                    ]);
+                }
+
+                if ($kategori && $kategori->tipe_data === 'checklist_apar') {
+                    $realValue = null;
+                    $detailData = is_array($value) ? json_encode($value) : $value;
+                } elseif ($kategori && $kategori->tipe_data === 'rumus_ach') {
+                    $ruang = Ruangan::find($request->ruangan_id);
+                    $volume = $ruang->panjang * $ruang->lebar * $ruang->tinggi;
+                    $luas_ventilasi = $ruang->luas_ventilasi_statis + (float) $value;
+                    $laju_ventilasi = $luas_ventilasi * 60;
+                    $pertukaran = $laju_ventilasi + (float) $value;
+                    $ach = $volume > 0 ? $pertukaran / $volume : 0;
+
+                    $realValue = round($ach, 2);
+                    $detailData = json_encode([
+                        'input_laju_udara' => $value,
+                        'volume' => $volume,
+                        'luas_ventilasi' => $luas_ventilasi,
+                        'pertukaran' => $pertukaran
+                    ]);
+                }
+
+                Pengukuran::create([
+                    'slug' => (string) Str::uuid(),
+                    'ruangan_id' => $request->ruangan_id,
+                    'kategori_pengukuran_id' => $kategoriId,
+                    'value' => $realValue,
+                    'detail_pengukuran' => $detailData,
+                    'waktu_pengukuran' => $request->waktu_pengukuran,
+                    'tanggal_pengukuran' => $request->tanggal_pengukuran,
+                    'keterangan' => $request->keterangan ?? null,
                 ]);
             }
-
-            Pengukuran::create([
-                'slug'                  => (string) Str::uuid(),
-                'ruangan_id'            => $request->ruangan_id,
-                'kategori_pengukuran_id'=> $kategoriId,
-                'value'                 => $realValue,
-                'detail_pengukuran'     => $detailData,
-                'waktu_pengukuran'      => $request->waktu_pengukuran,
-                'tanggal_pengukuran'    => $request->tanggal_pengukuran,
-                'keterangan'            => $request->keterangan ?? null,
+            DB::commit();
+            return redirect()->route('pengukuran.index')
+                ->with('success', 'Data pengukuran berhasil disimpan.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return back()->withErrors([
+                'measurements' => "Data pengukuran gagal disimpan."
             ]);
         }
 
-        return redirect()->route('pengukuran.index')
-            ->with('success', 'Data pengukuran berhasil disimpan.');
     }
 
     public function edit(Pengukuran $pengukuran)
     {
         return Inertia::render('pengukuran/edit', [
             'pengukuran' => $pengukuran->load(['ruangan', 'kategori_pengukuran']),
-            'ruangans'   => Ruangan::with('standarts.kategori')->get(),
+            'ruangans' => Ruangan::with('standarts.kategori')->get(),
         ]);
     }
 
     public function update(Request $request, Pengukuran $pengukuran)
     {
         $request->validate([
-            'ruangan_id'                => 'required|exists:ruangans,id',
-            'kategori_pengukuran_id'    => 'required|exists:kategori_pengukurans,id',
-            'tanggal_pengukuran'        => 'required|date',
-            'waktu_pengukuran'          => 'required|in:pagi,siang,malam',
-            'value'                     => 'nullable',
-            'keterangan'                => 'nullable|string',
+            'ruangan_id' => 'required|exists:ruangans,id',
+            'kategori_pengukuran_id' => 'required|exists:kategori_pengukurans,id',
+            'tanggal_pengukuran' => 'required|date',
+            'waktu_pengukuran' => 'required|in:pagi,siang,malam',
+            'value' => 'nullable',
+            'keterangan' => 'nullable|string',
         ]);
 
         $kategori = KategoriPengukuran::find($request->kategori_pengukuran_id);
@@ -124,11 +150,11 @@ class PengukuranController extends Controller
         } elseif ($kategori && $kategori->tipe_data === 'rumus_ach') {
             $ruang = Ruangan::find($request->ruangan_id);
             $volume = $ruang->panjang * $ruang->lebar * $ruang->tinggi;
-            $luas_ventilasi = $ruang->luas_ventilasi_statis + (float)$request->value;
+            $luas_ventilasi = $ruang->luas_ventilasi_statis + (float) $request->value;
             $laju_ventilasi = $luas_ventilasi * 60;
-            $pertukaran = $laju_ventilasi + (float)$request->value;
+            $pertukaran = $laju_ventilasi + (float) $request->value;
             $ach = $volume > 0 ? $pertukaran / $volume : 0;
-            
+
             $realValue = round($ach, 2);
             $detailData = json_encode([
                 'input_laju_udara' => $request->value,
