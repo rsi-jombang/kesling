@@ -247,7 +247,7 @@
 
     {{-- ── Grafik ──────────────────────────────────────────────────────────── --}}
     @php
-        $shiftColors = ['pagi' => '#2563eb', 'siang' => '#d97706', 'malam' => '#16a34a'];
+        $shiftColors = ['pagi' => '#2563eb', 'siang' => '#d9d906', 'malam' => '#16a34a'];
         $shiftLabels = ['pagi' => 'Pagi', 'siang' => 'Siang', 'malam' => 'Malam'];
     @endphp
 
@@ -349,7 +349,7 @@
             <td><strong>Total Pengukuran:</strong> {{ $tot }} Data</td>
             <td><strong>Memenuhi Standar:</strong> <span style="color:#166534;font-weight:bold;">{{ $ok }}</span></td>
             <td><strong>Tidak Memenuhi:</strong> <span style="color:#9f1239;font-weight:bold;">{{ $nok }}</span></td>
-            <td style="border:none;"><strong>Tingkat Kepatuhan:</strong> <span style="font-size:11px;font-weight:bold;">{{ $rate }}%</span></td>
+            <td style="border:none;"><strong>Presentase:</strong> <span style="font-size:11px;font-weight:bold;">{{ $rate }}%</span></td>
         </tr>
     </table>
 
@@ -365,7 +365,7 @@
     {{-- Signature Section --}}
     <table class="footer-table" style="width: 100%; margin-top: 20px;">
         <tr>
-            <td style="width: 33.3%; text-align: center; vertical-align: top;">
+            {{-- <td style="width: 33.3%; text-align: center; vertical-align: top;">
                 <br>
                 <strong>Kasi Ruangan,</strong>
                 <div style="margin-top: 60px;">
@@ -373,20 +373,20 @@
                         ( {{ $report['ruangan']->nama_kasi ?? '.........................................' }} )
                     </div>
                 </div>
-            </td>
+            </td> --}}
             <td style="width: 33.3%; text-align: center; vertical-align: top;">
                 Jombang, {{ now()->format('d m Y') }}<br>
                 <strong>Mengetahui,</strong>
-                <div style="margin-bottom: 5px;">Kepala Instalasi Kesling</div>
+                <div style="margin-bottom: 5px;">IPCN</div>
                 <div style="margin-top: 45px;">
                     <div style="border-top: 1px solid #000; width: 150px; margin: 0 auto; padding-top: 5px; font-weight: bold;">
-                        ( Siti Muhartatik )
+                        ( Miftakhul Jannah S.Kep.,Ns )
                     </div>
                 </div>
             </td>
             <td style="width: 33.3%; text-align: center; vertical-align: top;">
                 <br>
-                <strong>Petugas Kesling,</strong>
+                <strong>Pelaksana Kesehatan Lingkungan,</strong>
                 <div style="margin-top: 60px;">
                     <div style="border-top: 1px solid #000; width: 150px; margin: 0 auto; padding-top: 5px; font-weight: bold;">
                         ( Irtifaun Nisa' A.Md.Kes )

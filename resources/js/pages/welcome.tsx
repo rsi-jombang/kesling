@@ -881,21 +881,21 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                     <Sunrise className="h-5 w-5 text-amber-600" />
                                     <div>
                                         <p className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase">Shift Pagi</p>
-                                        <p className="text-[11px] font-medium opacity-60">07:00 - 14:00 WIB</p>
+                                        <p className="text-[11px] font-medium opacity-60">08:00 - 14:00 WIB</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 p-4 rounded-3xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/30">
                                     <Sun className="h-5 w-5 text-blue-600" />
                                     <div>
                                         <p className="text-[10px] font-black text-blue-800 dark:text-blue-400 uppercase">Shift Siang</p>
-                                        <p className="text-[11px] font-medium opacity-60">14:00 - 21:00 WIB</p>
+                                        <p className="text-[11px] font-medium opacity-60">14:00 - 20:00 WIB</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 p-4 rounded-3xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30">
                                     <Moon className="h-5 w-5 text-indigo-600" />
                                     <div>
                                         <p className="text-[10px] font-black text-indigo-800 dark:text-indigo-400 uppercase">Shift Malam</p>
-                                        <p className="text-[11px] font-medium opacity-60">21:00 - 07:00 WIB</p>
+                                        <p className="text-[11px] font-medium opacity-60">20:00 - 08:00 WIB</p>
                                     </div>
                                 </div>
                             </div>

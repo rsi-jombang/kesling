@@ -213,7 +213,7 @@ class ReportController extends Controller
 
         $shiftRgb = [
             'pagi'  => imagecolorallocate($img, 37,  99,  235),
-            'siang' => imagecolorallocate($img, 217, 119, 6),
+            'siang' => imagecolorallocate($img, 217, 217, 6),
             'malam' => imagecolorallocate($img, 22,  163, 74),
         ];
 
