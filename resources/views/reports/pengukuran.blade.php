@@ -378,19 +378,37 @@
                 Jombang, {{ now()->format('d m Y') }}<br>
                 <strong>Mengetahui,</strong>
                 <div style="margin-bottom: 5px;">IPCN</div>
-                <div style="margin-top: 45px;">
-                    <div style="border-top: 1px solid #000; width: 150px; margin: 0 auto; padding-top: 5px; font-weight: bold;">
-                        ( Miftakhul Jannah S.Kep.,Ns )
-                    </div>
+                <div style="margin-top: 5px;">
+                    @php
+                        $pathMifta = public_path('img/ttd mbak mifta.png');
+                        $base64Mifta = file_exists($pathMifta) ? base64_encode(file_get_contents($pathMifta)) : null;
+                    @endphp
+                    @if($base64Mifta)
+                        <img src="data:image/png;base64,{{ $base64Mifta }}" style="height: 60px; margin-bottom: -15px;">
+                    @else
+                        <div style="height: 60px;"></div>
+                    @endif
+                </div>
+                <div style="border-top: 1px solid #000; width: 170px; margin: 0 auto; padding-top: 5px; font-weight: bold;">
+                    ( Miftakhul Jannah S.Kep.,Ns )
                 </div>
             </td>
             <td style="width: 33.3%; text-align: center; vertical-align: top;">
                 <br>
                 <strong>Pelaksana Kesehatan Lingkungan,</strong>
-                <div style="margin-top: 60px;">
-                    <div style="border-top: 1px solid #000; width: 150px; margin: 0 auto; padding-top: 5px; font-weight: bold;">
-                        ( Irtifaun Nisa' A.Md.Kes )
-                    </div>
+                <div style="margin-top: 25px;">
+                    @php
+                        $pathNisa = public_path('img/ttd nisa.png');
+                        $base64Nisa = file_exists($pathNisa) ? base64_encode(file_get_contents($pathNisa)) : null;
+                    @endphp
+                    @if($base64Nisa)
+                        <img src="data:image/png;base64,{{ $base64Nisa }}" style="height: 60px; margin-bottom: -10px;">
+                    @else
+                        <div style="height: 60px;"></div>
+                    @endif
+                </div>
+                <div style="border-top: 1px solid #000; width: 170px; margin: 0 auto; padding-top: 5px; font-weight: bold;">
+                    ( Irtifaun Nisa' A.Md.Kes )
                 </div>
             </td>
         </tr>

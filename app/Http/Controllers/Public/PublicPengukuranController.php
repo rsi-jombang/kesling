@@ -44,16 +44,23 @@ class PublicPengukuranController extends Controller
         ]);
 
         // Cek apakah data untuk ruangan, shift, dan tanggal ini sudah ada
+        // Abaikan pengecekan jika kategori memiliki is_input_2_times = true
         $date = date('Y-m-d', strtotime($request->tanggal_pengukuran));
+        $submittedKategoriIds = array_keys($request->measurements);
+
         $exists = Pengukuran::where('ruangan_id', $request->ruangan_id)
             ->where('waktu_pengukuran', $request->waktu_pengukuran)
             ->whereDate('tanggal_pengukuran', $date)
+            ->whereIn('kategori_pengukuran_id', $submittedKategoriIds)
+            ->whereHas('kategori', function($query) {
+                $query->where('is_input_2_times', false);
+            })
             ->exists();
 
         if ($exists) {
             $ruangan = Ruangan::find($request->ruangan_id);
             return back()->withErrors([
-                'ruangan_id' => "Data pengukuran untuk {$ruangan->nama_ruangan} pada shift {$request->waktu_pengukuran} sudah diinput hari ini."
+                'ruangan_id' => "Beberapa parameter untuk {$ruangan->nama_ruangan} pada shift {$request->waktu_pengukuran} sudah diinput hari ini."
             ]);
         }
 
