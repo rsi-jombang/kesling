@@ -63,6 +63,7 @@ interface KategoriPengukuran {
     nama_kategori: string;
     satuan: string;
     tipe_data: string;
+    is_input_2_times?: boolean;
 }
 
 interface StandartPengukuran {
@@ -119,6 +120,9 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
 
     const [selectedRuangan, setSelectedRuangan] = useState<Ruangan | null>(null);
     const [focusedField, setFocusedField] = useState<number | null>(null);
+    const [existingData, setExistingData] = useState<Record<string, any>>({});
+    const [loadingExisting, setLoadingExisting] = useState(false);
+    const [existingError, setExistingError] = useState(false);
 
     // ── Public Report State ─────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState<'input' | 'report'>('input');
@@ -201,6 +205,7 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
             const ruangan = ruangans.find((r) => r.id === parseInt(data.ruangan_id));
             if (ruangan) {
                 setSelectedRuangan(ruangan);
+                setExistingData({});
                 const init: Record<number, any> = {};
                 ruangan.standarts.forEach((s) => {
                     if (s.kategori?.tipe_data === 'checklist_apar') {
@@ -213,8 +218,75 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
             }
         } else {
             setSelectedRuangan(null);
+            setExistingData({});
         }
     }, [data.ruangan_id]);
+
+    // Fetch existing measurements for the selected ruangan/date/shift
+    useEffect(() => {
+        if (!data.ruangan_id || !data.tanggal_pengukuran || !data.waktu_pengukuran) {
+            setExistingData({});
+            setExistingError(false);
+            return;
+        }
+        const controller = new AbortController();
+        setLoadingExisting(true);
+        setExistingError(false);
+        const date = data.tanggal_pengukuran.split('T')[0];
+        fetch(
+            `/public/pengukuran/existing?ruangan_id=${encodeURIComponent(data.ruangan_id)}&tanggal_pengukuran=${encodeURIComponent(date)}&waktu_pengukuran=${encodeURIComponent(data.waktu_pengukuran)}`,
+            { signal: controller.signal },
+        )
+            .then((res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then((json) => {
+                console.log('existing data:', json);
+                setExistingData(json?.data || {});
+            })
+            .catch((err) => {
+                console.error('failed to load existing data:', err);
+                setExistingData({});
+                setExistingError(true);
+            })
+            .finally(() => setLoadingExisting(false));
+        return () => controller.abort();
+    }, [data.ruangan_id, data.tanggal_pengukuran, data.waktu_pengukuran]);
+
+    // Prefill form with existing data (only non-is_input_2_times categories)
+    useEffect(() => {
+        if (!selectedRuangan) return;
+        const init: Record<number, any> = {};
+        selectedRuangan.standarts.forEach((s) => {
+            const cat = s.kategori;
+            if (cat?.is_input_2_times) {
+                init[s.kategori_pengukuran_id] = cat.tipe_data === 'checklist_apar' ? {} : '';
+                return;
+            }
+            const rec = existingData?.[s.kategori_pengukuran_id];
+            if (rec) {
+                if (cat?.tipe_data === 'checklist_apar') {
+                    let parsed: any = {};
+                    if (typeof rec.detail_pengukuran === 'string') {
+                        try {
+                            parsed = JSON.parse(rec.detail_pengukuran);
+                        } catch {
+                            parsed = {};
+                        }
+                    } else if (rec.detail_pengukuran) {
+                        parsed = rec.detail_pengukuran;
+                    }
+                    init[s.kategori_pengukuran_id] = parsed;
+                } else {
+                    init[s.kategori_pengukuran_id] = rec.value ?? '';
+                }
+            } else {
+                init[s.kategori_pengukuran_id] = cat?.tipe_data === 'checklist_apar' ? {} : '';
+            }
+        });
+        setData('measurements', init);
+    }, [selectedRuangan, existingData]);
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -461,6 +533,20 @@ export default function Welcome({ ruangans, kategoris, dateDefaults }: Props) {
                                 {errors.waktu_pengukuran && <p className="text-[10px] font-bold text-red-500 uppercase px-2">{errors.waktu_pengukuran}</p>}
                             </div>
                         </div>
+
+                        {Object.keys(existingData).length > 0 && (
+                            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+                                Data lama ditemukan untuk ruangan, tanggal, dan shift ini. Silakan edit lalu simpan.
+                            </div>
+                        )}
+                        {loadingExisting && (
+                            <div className="text-xs font-medium text-slate-500">Memuat data lama...</div>
+                        )}
+                        {existingError && (
+                            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                                Gagal memuat data lama. Cek koneksi atau console browser.
+                            </div>
+                        )}
 
                         {/* Step 2: Parameters */}
                         <div className="space-y-6 pt-10 border-t border-slate-100 dark:border-slate-800/10">

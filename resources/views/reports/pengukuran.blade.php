@@ -363,6 +363,29 @@
 
     {{-- Signature Section --}}
     {{-- Signature Section --}}
+    @php
+        $findTtd = function (string $needle): ?string {
+            foreach ([public_path('img'), base_path('public/img')] as $dir) {
+                if (! is_dir($dir)) {
+                    continue;
+                }
+                foreach (glob($dir.'/*') ?: [] as $file) {
+                    if (stripos(basename($file), $needle) !== false) {
+                        return $file;
+                    }
+                }
+            }
+            return null;
+        };
+        $pathMifta = $findTtd('mifta');
+        $base64Mifta = $pathMifta && is_readable($pathMifta)
+            ? base64_encode((string) file_get_contents($pathMifta))
+            : null;
+        $pathNisa = $findTtd('nisa');
+        $base64Nisa = $pathNisa && is_readable($pathNisa)
+            ? base64_encode((string) file_get_contents($pathNisa))
+            : null;
+    @endphp
     <table class="footer-table" style="width: 100%; margin-top: 20px;">
         <tr>
             {{-- <td style="width: 33.3%; text-align: center; vertical-align: top;">
@@ -379,10 +402,6 @@
                 <strong>Mengetahui,</strong>
                 <div style="margin-bottom: 5px;">IPCN</div>
                 <div style="margin-top: 5px;">
-                    @php
-                        $pathMifta = public_path('img/ttd mbak mifta.png');
-                        $base64Mifta = file_exists($pathMifta) ? base64_encode(file_get_contents($pathMifta)) : null;
-                    @endphp
                     @if($base64Mifta)
                         <img src="data:image/png;base64,{{ $base64Mifta }}" style="height: 60px; margin-bottom: -15px;">
                     @else
@@ -397,10 +416,6 @@
                 <br>
                 <strong>Pelaksana Kesehatan Lingkungan,</strong>
                 <div style="margin-top: 25px;">
-                    @php
-                        $pathNisa = public_path('img/ttd nisa.png');
-                        $base64Nisa = file_exists($pathNisa) ? base64_encode(file_get_contents($pathNisa)) : null;
-                    @endphp
                     @if($base64Nisa)
                         <img src="data:image/png;base64,{{ $base64Nisa }}" style="height: 60px; margin-bottom: -10px;">
                     @else

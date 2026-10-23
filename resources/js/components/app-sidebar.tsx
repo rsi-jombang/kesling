@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FileText, FolderGit2, Layers, LayoutGrid, MapPin, Ruler, Users } from 'lucide-react';
+import { BookOpen, FileText, FolderGit2, Layers, LayoutGrid, MapPin, Ruler, ShieldCheck, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -44,6 +44,11 @@ export function AppSidebar() {
             title: 'Pengukuran',
             href: pengukuran(),
             icon: Ruler,
+        },
+        {
+            title: 'Inventaris APAR',
+            href: '/apar',
+            icon: ShieldCheck,
         },
         {
             title: 'Laporan',

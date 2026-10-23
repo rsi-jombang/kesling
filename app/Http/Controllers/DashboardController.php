@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\KategoriPengukuran;
 use App\Models\Pengukuran;
+use App\Models\AparUnit;
 use App\Models\Ruangan;
 use App\Models\StandartPengukuran;
 use Illuminate\Http\Request;
@@ -82,6 +83,56 @@ class DashboardController extends Controller
                 'tanggal' => Carbon::parse($p->tanggal_pengukuran)->format('d M Y'),
             ]);
 
+        // ── Analitik Ketidaksesuaian (3/6/12 bulan) ───────────────────
+        $periode = (int) $request->input('periode', 3);
+        if (! in_array($periode, [3, 6, 12], true)) {
+            $periode = 3;
+        }
+        $startDate = Carbon::now()->subMonths($periode)->startOfMonth();
+
+        $tidakMemenuhiRecords = Pengukuran::with(['ruangan', 'kategori_pengukuran'])
+            ->where('status', 'tidak memenuhi')
+            ->where('tanggal_pengukuran', '>=', $startDate)
+            ->get();
+
+        $topRuanganTidakMemenuhi = $tidakMemenuhiRecords
+            ->groupBy('ruangan_id')
+            ->map(fn ($items) => [
+                'id'            => (int) $items->first()->ruangan_id,
+                'nama_ruangan'  => $items->first()->ruangan->nama_ruangan ?? '-',
+                'total'         => $items->count(),
+            ])
+            ->sortByDesc('total')
+            ->take(5)
+            ->values();
+
+        $selectedRuanganId = (int) $request->input('ruangan_id_analitik', $topRuanganTidakMemenuhi->first()['id'] ?? (Ruangan::first()?->id ?? 0));
+
+        $trenParameter = $tidakMemenuhiRecords
+            ->where('ruangan_id', $selectedRuanganId)
+            ->groupBy('kategori_pengukuran_id')
+            ->map(fn ($items) => [
+                'kategori'  => $items->first()->kategori_pengukuran->nama_kategori ?? '-',
+                'per_bulan' => $items
+                    ->groupBy(fn ($p) => Carbon::parse($p->tanggal_pengukuran)->format('Y-m'))
+                    ->map(fn ($g) => $g->count())
+                    ->toArray(),
+            ])
+            ->values();
+
+        $aparKadaluarsa = AparUnit::with('ruangan')
+            ->whereNotNull('tanggal_kadaluarsa')
+            ->where('tanggal_kadaluarsa', '<=', Carbon::now()->addDays(30))
+            ->orderBy('tanggal_kadaluarsa')
+            ->limit(10)
+            ->get()
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'nomor_seri' => $u->nomor_seri,
+                'ruangan' => $u->ruangan->nama_ruangan ?? '-',
+                'tanggal_kadaluarsa' => $u->tanggal_kadaluarsa?->format('d M Y'),
+            ]);
+
         // ── Data Grafik Harian (filter-aware) ─────────────────────────
         $grafikData = $this->buildGrafikData($request);
 
@@ -97,6 +148,13 @@ class DashboardController extends Controller
             'tren'               => $tren,
             'pengukuranTerbaru'  => $pengukuranTerbaru,
             'alertTidakMemenuhi' => $alertTidakMemenuhi,
+
+            // Analitik ketidaksesuaian
+            'periodeAnalitik'          => $periode,
+            'topRuanganTidakMemenuhi' => $topRuanganTidakMemenuhi,
+            'selectedRuanganAnalitik'  => $selectedRuanganId,
+            'trenParameter'            => $trenParameter,
+            'aparKadaluarsa'          => $aparKadaluarsa,
 
             // Grafik harian
             'grafikData'         => $grafikData,

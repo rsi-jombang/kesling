@@ -116,6 +116,11 @@ interface Props {
     tren: TrenItem[];
     pengukuranTerbaru: PengukuranTerbaru[];
     alertTidakMemenuhi: AlertItem[];
+    periodeAnalitik: number;
+    topRuanganTidakMemenuhi: { id: number; nama_ruangan: string; total: number }[];
+    selectedRuanganAnalitik: number;
+    trenParameter: { kategori: string; per_bulan: Record<string, number> }[];
+    aparKadaluarsa: { id: number; nomor_seri: string; ruangan: string; tanggal_kadaluarsa: string | null }[];
     grafikData: GrafikData | [];
     ruangans: Ruangan[];
     kategoris: Kategori[];
@@ -178,7 +183,8 @@ const YEARS = Array.from({ length: 5 }, (_, i) => currentYear - i);
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function Dashboard({
     stats, rekapRuangan, tren, pengukuranTerbaru,
-    alertTidakMemenuhi, grafikData: initialGrafik, ruangans, kategoris, filterDefault,
+    alertTidakMemenuhi, periodeAnalitik, topRuanganTidakMemenuhi,
+    selectedRuanganAnalitik, trenParameter, aparKadaluarsa, grafikData: initialGrafik, ruangans, kategoris, filterDefault,
 }: Props) {
     const maxTren = Math.max(...tren.map((t) => t.total), 1);
 
@@ -672,6 +678,110 @@ export default function Dashboard({
                                 </tbody>
                             </table>
                         </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Analitik Ketidaksesuaian ───────────────────────── */}
+            <div className="rounded-xl border bg-card shadow-sm p-5 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold">Analitik Ketidaksesuaian</h2>
+                    <select
+                        value={periodeAnalitik}
+                        onChange={(e) => router.get('/dashboard', {
+                            periode: e.target.value,
+                            ruangan_id: filter.ruangan_id,
+                            kategori_id: filter.kategori_id,
+                            bulan: filter.bulan,
+                            tahun: filter.tahun,
+                            ruangan_id_analitik: selectedRuanganAnalitik,
+                        }, { preserveState: true, preserveScroll: true })}
+                        className="h-9 rounded-lg border bg-background px-2 text-sm"
+                    >
+                        <option value={3}>3 bulan</option>
+                        <option value={6}>6 bulan</option>
+                        <option value={12}>12 bulan</option>
+                    </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground mb-2">
+                            5 Ruangan Tidak Memenuhi Terbanyak
+                        </h3>
+                        {topRuanganTidakMemenuhi.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Tidak ada data.</p>
+                        ) : (
+                            <ul className="space-y-2">
+                                {topRuanganTidakMemenuhi.map((r, i) => (
+                                    <li key={r.id} className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2">
+                                        <span className="text-sm font-medium">
+                                            {i + 1}. {r.nama_ruangan}
+                                        </span>
+                                        <span className="text-sm font-bold text-red-600">{r.total}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-xs font-semibold text-muted-foreground">
+                                Tren per Parameter (Tidak Memenuhi)
+                            </h3>
+                            <select
+                                value={selectedRuanganAnalitik}
+                                onChange={(e) => router.get('/dashboard', {
+                                    periode: periodeAnalitik,
+                                    ruangan_id: filter.ruangan_id,
+                                    kategori_id: filter.kategori_id,
+                                    bulan: filter.bulan,
+                                    tahun: filter.tahun,
+                                    ruangan_id_analitik: e.target.value,
+                                }, { preserveState: true, preserveScroll: true })}
+                                className="h-8 rounded-lg border bg-background px-2 text-xs"
+                            >
+                                {ruangans.map((r) => (
+                                    <option key={r.id} value={r.id}>{r.nama_ruangan}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {trenParameter.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Tidak ada data.</p>
+                        ) : (
+                            <ul className="space-y-2">
+                                {trenParameter.map((t, i) => (
+                                    <li key={i} className="rounded-lg border bg-muted/20 px-3 py-2">
+                                        <p className="text-sm font-medium">{t.kategori}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {Object.entries(t.per_bulan)
+                                                .sort(([a], [b]) => a.localeCompare(b))
+                                                .map(([bulan, jumlah]) => `${bulan}: ${jumlah}`)
+                                                .join(' · ')}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+
+                <div>
+                    <h3 className="text-xs font-semibold text-muted-foreground mb-2">
+                        APAR Kadaluarsa (≤ 30 hari)
+                    </h3>
+                    {aparKadaluarsa.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Tidak ada APAR yang akan kadaluarsa.</p>
+                    ) : (
+                        <ul className="space-y-2">
+                            {aparKadaluarsa.map((u) => (
+                                <li key={u.id} className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2">
+                                    <span className="text-sm font-medium">{u.nomor_seri} — {u.ruangan}</span>
+                                    <span className="text-xs text-red-600 font-semibold">{u.tanggal_kadaluarsa}</span>
+                                </li>
+                            ))}
+                        </ul>
                     )}
                 </div>
             </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AparUnitController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KategoriPengukuranController;
 use App\Http\Controllers\PengukuranController;
@@ -9,12 +10,14 @@ use App\Http\Controllers\RuanganController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicPengukuranController::class, 'index'])->name('home');
+Route::get('/public/pengukuran/existing', [PublicPengukuranController::class, 'existing'])->name('public.pengukuran.existing');
 Route::post('/store-pengukuran', [PublicPengukuranController::class, 'store'])->name('public.pengukuran.store');
 Route::get('/public/grafik', [App\Http\Controllers\Public\PublicReportController::class, 'grafik'])->name('public.grafik');
 Route::get('/public/report/download', [App\Http\Controllers\Public\PublicReportController::class, 'download'])->name('public.report.download');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::resource('apar', AparUnitController::class);
     Route::get('dashboard/grafik', [DashboardController::class, 'grafik'])->name('dashboard.grafik');
     Route::resource('ruangan', RuanganController::class);
     Route::resource('kategori', KategoriPengukuranController::class);

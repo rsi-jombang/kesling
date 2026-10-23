@@ -33,6 +33,38 @@ class PublicPengukuranController extends Controller
         ]);
     }
 
+    public function existing(Request $request)
+    {
+        $request->validate([
+            'ruangan_id' => 'required|exists:ruangans,id',
+            'tanggal_pengukuran' => 'required|date',
+            'waktu_pengukuran' => 'required|in:pagi,siang,malam',
+        ]);
+
+        $date = date('Y-m-d', strtotime($request->tanggal_pengukuran));
+
+        $records = Pengukuran::where('ruangan_id', $request->ruangan_id)
+            ->where('waktu_pengukuran', $request->waktu_pengukuran)
+            ->whereDate('tanggal_pengukuran', $date)
+            ->get();
+
+        $data = [];
+        foreach ($records as $record) {
+            // For is_input_2_times categories, keep the latest record only for prefill
+            $current = $data[$record->kategori_pengukuran_id] ?? null;
+            if ($current === null || $record->id > $current['id']) {
+                $data[$record->kategori_pengukuran_id] = [
+                    'id' => $record->id,
+                    'value' => $record->value,
+                    'detail_pengukuran' => $record->detail_pengukuran,
+                    'keterangan' => $record->keterangan,
+                ];
+            }
+        }
+
+        return response()->json(['data' => $data]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -43,26 +75,14 @@ class PublicPengukuranController extends Controller
             'measurements.*' => 'nullable', // tidak strict numeric karena ada tipe data lain
         ]);
 
-        // Cek apakah data untuk ruangan, shift, dan tanggal ini sudah ada
-        // Abaikan pengecekan jika kategori memiliki is_input_2_times = true
         $date = date('Y-m-d', strtotime($request->tanggal_pengukuran));
-        $submittedKategoriIds = array_keys($request->measurements);
 
-        $exists = Pengukuran::where('ruangan_id', $request->ruangan_id)
+        // Existing records for this ruangan/date/shift, keyed by kategori
+        $existingRecords = Pengukuran::where('ruangan_id', $request->ruangan_id)
             ->where('waktu_pengukuran', $request->waktu_pengukuran)
             ->whereDate('tanggal_pengukuran', $date)
-            ->whereIn('kategori_pengukuran_id', $submittedKategoriIds)
-            ->whereHas('kategori', function($query) {
-                $query->where('is_input_2_times', false);
-            })
-            ->exists();
-
-        if ($exists) {
-            $ruangan = Ruangan::find($request->ruangan_id);
-            return back()->withErrors([
-                'ruangan_id' => "Beberapa parameter untuk {$ruangan->nama_ruangan} pada shift {$request->waktu_pengukuran} sudah diinput hari ini."
-            ]);
-        }
+            ->get()
+            ->keyBy('kategori_pengukuran_id');
 
         foreach ($request->measurements as $kategoriId => $value) {
             if ($value === null || $value === '') continue;
@@ -91,15 +111,48 @@ class PublicPengukuranController extends Controller
                 ]);
             }
 
-            Pengukuran::create([
-                'slug' => (string) Str::uuid(),
-                'ruangan_id' => $request->ruangan_id,
-                'kategori_pengukuran_id' => $kategoriId,
-                'value' => $realValue,
-                'detail_pengukuran' => $detailData,
-                'waktu_pengukuran' => $request->waktu_pengukuran,
-                'tanggal_pengukuran' => $request->tanggal_pengukuran,
-            ]);
+            // Empty value: remove stale record (if any) instead of keeping old data
+            if ($value === null || $value === '' || $value === []) {
+                if (isset($existingRecords[$kategoriId]) && ! $kategori?->is_input_2_times) {
+                    $existingRecords[$kategoriId]->delete();
+                }
+                continue;
+            }
+
+            // is_input_2_times categories remain append-only
+            if ($kategori?->is_input_2_times) {
+                Pengukuran::create([
+                    'slug' => (string) Str::uuid(),
+                    'ruangan_id' => $request->ruangan_id,
+                    'kategori_pengukuran_id' => $kategoriId,
+                    'value' => $realValue,
+                    'detail_pengukuran' => $detailData,
+                    'waktu_pengukuran' => $request->waktu_pengukuran,
+                    'tanggal_pengukuran' => $request->tanggal_pengukuran,
+                    'keterangan' => $request->keterangan ?? null,
+                ]);
+                continue;
+            }
+
+            if (isset($existingRecords[$kategoriId])) {
+                $existingRecords[$kategoriId]->update([
+                    'value' => $realValue,
+                    'detail_pengukuran' => $detailData,
+                    'keterangan' => $request->keterangan ?? $existingRecords[$kategoriId]->keterangan,
+                    'tanggal_pengukuran' => $request->tanggal_pengukuran,
+                ]);
+            } else {
+                Pengukuran::create([
+                    'slug' => (string) Str::uuid(),
+                    'ruangan_id' => $request->ruangan_id,
+                    'kategori_pengukuran_id' => $kategoriId,
+                    'value' => $realValue,
+                    'detail_pengukuran' => $detailData,
+                    'waktu_pengukuran' => $request->waktu_pengukuran,
+                    'tanggal_pengukuran' => $request->tanggal_pengukuran,
+                    'keterangan' => $request->keterangan ?? null,
+                ]);
+            }
         }
 
         return redirect()->route('home')->with('success', 'Data pengukuran berhasil disimpan.');
